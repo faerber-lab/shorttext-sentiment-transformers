@@ -162,3 +162,10 @@ trainer = CustomTrainer(
 )
 
 trainer.train()
+
+# Specify the directory where you want to save your model
+output_dir = './bert-topic-cls'
+# Save the model
+model.save_pretrained(output_dir)
+# Save the tokenizer
+tokenizer.save_pretrained(output_dir)
