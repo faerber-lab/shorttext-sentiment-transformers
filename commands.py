@@ -1,0 +1,95 @@
+import transformers
+from utilities import *
+
+def train_Roberta_model_and_save_best(model_name,dataset_path):
+    
+    tokenizer = RobertaTokenizer.from_pretrained(model_name)
+    
+    training_set, validation_set = load_and_split_dataset(dataset_path, 0.95)
+    training_set = tokenize_dataset(training_set, tokenizer, 512)
+    validation_set = tokenize_dataset(validation_set, tokenizer, 512)
+    
+    model = CustomClassifier(model_name, RobertaModel, 768)
+    
+    # forward dummy batch:
+    dummys = torch.zeros((2, 512), dtype=torch.long)
+    model(dummys, dummys, dummys)
+    
+    save_file_path = get_save_file_path(model_name)
+    
+    training_args = TrainingArguments(
+        output_dir=save_file_path,
+        num_train_epochs=1,
+        per_device_train_batch_size=4,
+        per_device_eval_batch_size=4,
+        warmup_steps=500,
+        weight_decay=0.01,
+        logging_dir='./logs',
+        eval_strategy='steps',  # Evaluate at the end of each epoch
+        eval_steps=100,
+        eval_on_start=True,
+        logging_steps=10,
+        label_names=["labels"],
+        dataloader_drop_last=True,
+        ## ---
+        report_to="tensorboard",
+    
+        ## best model
+        metric_for_best_model="accuracy",
+        greater_is_better=True,
+        load_best_model_at_end=True,
+        save_strategy="steps",
+        save_steps=100
+    )
+    data_collator = transformers.DataCollatorWithPadding(tokenizer=tokenizer)
+    trainer = CustomTrainer(model=model, args=training_args,
+                            train_dataset=training_set,
+                            eval_dataset=validation_set,
+                            data_collator=data_collator, 
+                            compute_metrics=compute_metrics)
+    torch.save(model, f"{save_file_path}/base_model.pth")
+    trainer.train()
+    print(f"Best model saved at {trainer.state.best_model_checkpoint}")
+    trainer._load_best_model()
+    results = trainer.evaluate()
+    print(results)
+    model = CustomClassifier(model_name, RobertaModel, 768)
+    model.load_state_dict(torch.load(f"{trainer.state.best_model_checkpoint}/pytorch_model.bin",weights_only=True))
+    torch.save(model, f"{save_file_path}/best_model.pth")
+    
+    trainer = CustomTrainer(model=model, args=training_args,
+                            train_dataset=training_set,
+                            eval_dataset=validation_set,
+                            data_collator=data_collator, 
+                            compute_metrics=compute_metrics)
+    print("Best model loaded")
+    print(trainer.evaluate(eval_dataset=validation_set))
+    
+    remove_all_files_and_folders_except_best_model(save_file_path)
+    
+    return
+
+
+def load_and_validate_Roberta_model(model_name,model_path,dataset_path):
+    tokenizer = RobertaTokenizer.from_pretrained(model_name)
+    validation_set , _ = load_and_split_dataset(dataset_path,0.95)
+    validation_set = tokenize_dataset(validation_set, tokenizer, 512)
+    #model = CustomClassifier(model_name, RobertaModel, 768)
+    model = torch.load(model_path)# should be .result/.../best_model.pth or similar
+    data_collator = transformers.DataCollatorWithPadding(tokenizer=tokenizer)
+    training_args = TrainingArguments(output_dir=".",
+                                        per_device_eval_batch_size=4,
+                                        label_names=["labels"],
+                                        dataloader_drop_last=True)
+    trainer = CustomTrainer(model=model,
+
+                            args=training_args,
+                            eval_dataset=validation_set,
+                            data_collator=data_collator, 
+                            compute_metrics=compute_metrics)
+    print(trainer.evaluate(eval_dataset=validation_set))
+    return
+
+#train_Roberta_model_and_save_best("roberta-base","data/public_data/train/track_a/eng.csv")
+
+load_and_validate_Roberta_model("roberta-base","./results/roberta-base_2024-12-16_19-13-00/best_model.pth","data/public_data/train/track_a/eng.csv")
