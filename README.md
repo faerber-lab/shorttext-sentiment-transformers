@@ -18,35 +18,53 @@ git lfs pull
 
 ## Setup
 
-# Load modules
+1. SSH on Hpc
+2. Load modules (has to be done only once)
+3. Create workspace
+4. Link workspace 
+5. Create Venv in workspace 
+6. Run interactive job (you will be redirected to a compute node)
+7. Activate Venv 
+8. Run python script
+
+### How To:
+#### SSH On Hpc
+```
+ssh <zih-login>@login2.alpha.hpc.tu-dresden.de
+```
+
+#### Load Modules
+
 ```
 module load release/24.04
 module load GCCcore/11.3.0
 module load Python/3.10.4
+module save
 ```
 
-create workspace on hpc:
+#### Create Workspace On Hpc:
+Workspace will be up for 100 days. 
 ```
-ws_allocate name 100 -r 7 # more info: ws_allocate -h
+ws_allocate <name> 100 -r 7 # more info: ws_allocate -h
 ```
 
-link workspace
+#### Link Workspace
 ```
 ln -s <ws_link> <name>
 ```
 
-create venv in workspace:
+#### Create Venv In Workspace:
 ```
 virtualenv myvenv
 ```
 
-activate venv:
+#### Activate Venv:
 ```
 . myvenv/bin/activate
 pip install -r requirements.txt
 ```
 
-run interactive job:
+#### Run Interactive Job:
 ```
 srun --ntasks=1 --cpus-per-task=1 --time=4:00:00 --mem-per-cpu=8000 --pty --nodes=1 --account=p_scads_llm_secrets --gpus-per-task=1 bash -l
 ```
@@ -56,6 +74,21 @@ and work inside the workspace with running venv
 
 batch job: TODO
 
+## Known Bugs: 
+
+### Default Trainer drops first row of model outputs
+
+#### Workaroud
+Custom Trainer with custom compute_loss function that adds a dummy line to the output. 
+
+#### Solution 
+Trainer expects the model to compute the loss and to return it as the first row of the output. Therefore this first row is dropped before continuing with the model output. -> Maybe change custom model accordingly?
+
+### Trainer.predict() returns too little solutions sometimes
+When the number of the examples in the test set which is given to the trainer.predict() method is not divisible by the number which is set for the 'per_device_eval_batch_size' in the TrainigArguments the number of returnt predictions is dropped to the nearest number that is divisable. 
+
+#### Workaround
+Just accepting it. 
 
 
 ## Paperinhalt 

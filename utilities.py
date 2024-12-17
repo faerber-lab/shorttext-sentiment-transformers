@@ -3,17 +3,25 @@ from sklearn.model_selection import train_test_split
 import torch
 from torch import nn
 
-
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 from transformers import AutoTokenizer, AutoModelForMaskedLM
 from transformers import RobertaModel, RobertaTokenizer, TrainingArguments, Trainer
 
 import os
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+import numpy as np 
+
+from sklearn.metrics import accuracy_score, precision_recall_fscore_support, multilabel_confusion_matrix
 
 
-
-from torch import cuda
-device = 'cuda' if cuda.is_available() else 'cpu'
+if torch.backends.mps.is_available():
+    device = torch.device('mps') # for m series mac 
+elif torch.cuda.is_available():
+    device = torch.device('cuda')
+else:
+    device = torch.device('cpu')
 
 
 def load_and_split_dataset(dataset_path, split_ratio=0.8):
@@ -67,7 +75,7 @@ class CustomClassifier(torch.nn.Module):
         self.pre_classifier = torch.nn.LazyLinear(classifier_size)
         self.dropout = torch.nn.Dropout(dropout_rate)
         self.classifier = torch.nn.Linear(classifier_size, num_classes)
-        self.sigmoid = torch.nn.Sigmoid()
+        self.sigmoid = torch.nn.Sigmoid()   
         
     def forward(self, input_ids, attention_mask, token_type_ids):
         output_1 = self.l1(input_ids=input_ids, attention_mask=attention_mask, token_type_ids=token_type_ids)
@@ -116,6 +124,18 @@ def compute_metrics(p):
         return {
              'accuracy': accuracy
         }
+
+def compute_metrics_f1(p): 
+    predictions, labels = p
+    predictions = torch.tensor(predictions)
+    predictions = torch.sigmoid(predictions)
+    predictions = torch.round(predictions)
+
+    # can raise a warning when there are no positive labels or predictions for one 
+    # emotion in the passed data 
+    precision, recall, f1, _ = precision_recall_fscore_support(labels, predictions, average='weighted')
+    acc = accuracy_score(labels, predictions)
+    return {'accuracy': acc, 'f1': f1, 'precision': precision, 'recall': recall}
         
         
 def get_save_file_path(model_name):
@@ -142,4 +162,41 @@ def remove_all_files_and_folders_except_best_model(folder_path):
             except:
                 os.remove(f"{folder_path}/{file}")
     return best_model
+
+def plot_confusion_matrix(predictions, save_path = None, file_name = None, show = True): 
+
+    preds = predictions.predictions
+    preds = torch.tensor(preds)
+    preds = torch.sigmoid(preds)
+    preds = torch.round(preds)
+
+    label_map = {
+    'LABEL_0': 'Anger',
+    'LABEL_1': 'Fear',
+    'LABEL_2': 'Joy',
+    'LABEL_3': 'Sadness',
+    'LABEL_4': 'Surprise'
+    }
+
+    cm = multilabel_confusion_matrix(predictions.label_ids, preds)
+
+    # label_map to labels
+    labels = [label_map[f'LABEL_{i}'] for i in range(len(label_map))]
+
+    # Confusion Matrix
+    plt.figure(figsize=(20, 10))
+    
+    for i, label in enumerate(labels): 
+        plt.subplot(2, 3, i + 1)
+        sns.heatmap(cm[i], annot=True, fmt='d', cmap='Blues', xticklabels=["False", "True"], yticklabels=["False", "True"])
+        plt.xlabel('Predicted value')
+        plt.ylabel('True value')
+        plt.title(f"Confusion Matrix for '{label}' class")
+
+
+    if save_path is not None and file_name is not None: 
+        plt.savefig(f"{save_path}/{file_name}.png", bbox_inches='tight')
+
+    if show: 
+        plt.show()
     

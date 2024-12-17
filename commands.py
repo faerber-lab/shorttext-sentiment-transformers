@@ -10,10 +10,15 @@ def train_Roberta_model_and_save_best(model_name,dataset_path):
     validation_set = tokenize_dataset(validation_set, tokenizer, 512)
     
     model = CustomClassifier(model_name, RobertaModel, 768)
+
+    # TODO add freeze layers 
+
+    # TODO add LoRa
+
     
     # forward dummy batch:
     dummys = torch.zeros((2, 512), dtype=torch.long)
-    model(dummys, dummys, dummys)
+    model(dummys, dummys, dummys) # to initialize LazyLinear layer to fit model output dimension to classification head input dimension   
     
     save_file_path = get_save_file_path(model_name)
     
@@ -70,15 +75,19 @@ def train_Roberta_model_and_save_best(model_name,dataset_path):
     return
 
 
-def load_and_validate_Roberta_model(model_name,model_path,dataset_path):
+def load_and_validate_Roberta_model(model_name, model_path, dataset_path, plot_conf_mat = "none"):
     tokenizer = RobertaTokenizer.from_pretrained(model_name)
     validation_set , _ = load_and_split_dataset(dataset_path,0.95)
     validation_set = tokenize_dataset(validation_set, tokenizer, 512)
+
+    # TODO remove, only for testing
+    validation_set = validation_set[:35]
+
     #model = CustomClassifier(model_name, RobertaModel, 768)
     model = torch.load(model_path)# should be .result/.../best_model.pth or similar
     data_collator = transformers.DataCollatorWithPadding(tokenizer=tokenizer)
     training_args = TrainingArguments(output_dir=".",
-                                        per_device_eval_batch_size=4,
+                                        per_device_eval_batch_size=5,
                                         label_names=["labels"],
                                         dataloader_drop_last=True)
     trainer = CustomTrainer(model=model,
@@ -86,10 +95,31 @@ def load_and_validate_Roberta_model(model_name,model_path,dataset_path):
                             args=training_args,
                             eval_dataset=validation_set,
                             data_collator=data_collator, 
-                            compute_metrics=compute_metrics)
-    print(trainer.evaluate(eval_dataset=validation_set))
+                            compute_metrics=compute_metrics_f1)
+    
+    predictions = trainer.predict(validation_set)
+
+    print(predictions.metrics)
+
+    if plot_conf_mat == "plot": 
+
+        plot_confusion_matrix(predictions)
+
+    elif plot_conf_mat == "plot_and_save": 
+
+        plot_confusion_matrix(predictions, save_path = "./graphs/confusion_matrix", file_name = f"{model_name}_{len(validation_set)}_confusion_mat")
+
+    elif plot_conf_mat == "save": 
+
+        plot_confusion_matrix(predictions, save_path = "./graphs/confusion_matrix", file_name = f"{model_name}_{len(validation_set)}_confusion_mat", show = False)
+    
+    elif plot_conf_mat == "none": 
+        print("Confusion matrix is not plotted or saved.")
+    else: 
+        print(f"'{plot_conf_mat}' is no valid value for this parameter. The confusion matrix is not plotted or saved.")
+
     return
 
 #train_Roberta_model_and_save_best("roberta-base","data/public_data/train/track_a/eng.csv")
 
-load_and_validate_Roberta_model("roberta-base","./results/roberta-base_2024-12-16_19-13-00/best_model.pth","data/public_data/train/track_a/eng.csv")
+load_and_validate_Roberta_model("roberta-base","./results/roberta-base_2024-12-16_19-13-00/best_model.pth","data/public_data/train/track_a/eng.csv", plot_conf_mat = "save")
