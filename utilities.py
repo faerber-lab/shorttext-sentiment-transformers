@@ -7,6 +7,7 @@ from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 from transformers import AutoTokenizer, AutoModelForMaskedLM
 from transformers import RobertaModel, RobertaTokenizer, TrainingArguments, Trainer
 
+
 import os
 import seaborn as sns
 import matplotlib.pyplot as plt
@@ -72,6 +73,7 @@ class CustomClassifier(torch.nn.Module):
         #self.l1 = AutoModelForMaskedLM.from_pretrained("distilbert/distilroberta-base")
         #self.l1 = AutoModelForSeq2SeqLM.from_pretrained(model_name)#"google-t5/t5-small")
         self.l1 = model_type.from_pretrained(model_name)
+
         self.pre_classifier = torch.nn.LazyLinear(classifier_size)
         self.dropout = torch.nn.Dropout(dropout_rate)
         self.classifier = torch.nn.Linear(classifier_size, num_classes)

@@ -1,7 +1,10 @@
 import transformers
-from utilities import *
 
-def train_Roberta_model_and_save_best(model_name,dataset_path):
+from utilities import *
+from peft import LoraConfig, TaskType, get_peft_model
+
+
+def train_Roberta_model_and_save_best(model_name,dataset_path, freeze_layers = False, freeze_to_layer = 12, loRa = False):
     
     tokenizer = RobertaTokenizer.from_pretrained(model_name)
     
@@ -9,16 +12,33 @@ def train_Roberta_model_and_save_best(model_name,dataset_path):
     training_set = tokenize_dataset(training_set, tokenizer, 512)
     validation_set = tokenize_dataset(validation_set, tokenizer, 512)
     
-    model = CustomClassifier(model_name, RobertaModel, 768)
+    model = CustomClassifier(model_name = model_name, model_type = RobertaModel, classifier_size = 768)
 
-    # TODO add freeze layers 
+    # print name and type of all modules the model contains 
+    #print([(n, type(m)) for n, m in model.named_modules()])
 
-    # TODO add LoRa
-
-    
     # forward dummy batch:
     dummys = torch.zeros((2, 512), dtype=torch.long)
     model(dummys, dummys, dummys) # to initialize LazyLinear layer to fit model output dimension to classification head input dimension   
+    
+    if loRa: 
+        lora_config = LoraConfig(
+            task_type=TaskType.SEQ_CLS, r=1, 
+            lora_alpha=1, 
+            lora_dropout=0.1, 
+            target_modules = ["query", "value"],
+            modules_to_save = ["pre_classifier", "classifier"] # keep custom classification head trainable 
+        )
+
+        model = get_peft_model(model, lora_config)
+
+        # LoRa info 
+        print(model.print_trainable_parameters())
+
+    # freeze layers of pretrained base model 
+    if freeze_layers: 
+        for param in model.l1.encoder.layer[:freeze_to_layer-1].parameters(): 
+            param.requires_grad = False
     
     save_file_path = get_save_file_path(model_name)
     
@@ -46,14 +66,15 @@ def train_Roberta_model_and_save_best(model_name,dataset_path):
         save_strategy="steps",
         save_steps=100
     )
+
     data_collator = transformers.DataCollatorWithPadding(tokenizer=tokenizer)
     trainer = CustomTrainer(model=model, args=training_args,
                             train_dataset=training_set,
                             eval_dataset=validation_set,
                             data_collator=data_collator, 
-                            compute_metrics=compute_metrics)
-    torch.save(model, f"{save_file_path}/base_model.pth")
-    trainer.train()
+                            compute_metrics=compute_metrics_f1)
+    # torch.save(model, f"{save_file_path}/base_model.pth")
+    # trainer.train()
     print(f"Best model saved at {trainer.state.best_model_checkpoint}")
     trainer._load_best_model()
     results = trainer.evaluate()
@@ -66,7 +87,7 @@ def train_Roberta_model_and_save_best(model_name,dataset_path):
                             train_dataset=training_set,
                             eval_dataset=validation_set,
                             data_collator=data_collator, 
-                            compute_metrics=compute_metrics)
+                            compute_metrics=compute_metrics_f1)
     print("Best model loaded")
     print(trainer.evaluate(eval_dataset=validation_set))
     
@@ -81,10 +102,10 @@ def load_and_validate_Roberta_model(model_name, model_path, dataset_path, plot_c
     validation_set = tokenize_dataset(validation_set, tokenizer, 512)
 
     # TODO remove, only for testing
-    validation_set = validation_set[:35]
+    # validation_set = validation_set[:35]
 
     #model = CustomClassifier(model_name, RobertaModel, 768)
-    model = torch.load(model_path)# should be .result/.../best_model.pth or similar
+    model = torch.load(f"./results/{model_path}/best_model.pth")# should be .results/.../best_model.pth or similar
     data_collator = transformers.DataCollatorWithPadding(tokenizer=tokenizer)
     training_args = TrainingArguments(output_dir=".",
                                         per_device_eval_batch_size=5,
@@ -107,11 +128,11 @@ def load_and_validate_Roberta_model(model_name, model_path, dataset_path, plot_c
 
     elif plot_conf_mat == "plot_and_save": 
 
-        plot_confusion_matrix(predictions, save_path = "./graphs/confusion_matrix", file_name = f"{model_name}_{len(validation_set)}_confusion_mat")
+        plot_confusion_matrix(predictions, save_path = "./graphs/confusion_matrix", file_name = f"{model_path}_confusion_mat")
 
     elif plot_conf_mat == "save": 
 
-        plot_confusion_matrix(predictions, save_path = "./graphs/confusion_matrix", file_name = f"{model_name}_{len(validation_set)}_confusion_mat", show = False)
+        plot_confusion_matrix(predictions, save_path = "./graphs/confusion_matrix", file_name = f"{model_path}_confusion_mat", show = False)
     
     elif plot_conf_mat == "none": 
         print("Confusion matrix is not plotted or saved.")
@@ -121,5 +142,17 @@ def load_and_validate_Roberta_model(model_name, model_path, dataset_path, plot_c
     return
 
 #train_Roberta_model_and_save_best("roberta-base","data/public_data/train/track_a/eng.csv")
+if __name__ == "__main__": 
+    load_and_validate_Roberta_model("roberta-base","roberta-base_2024-12-16_19-13-00","data/public_data/train/track_a/eng.csv", plot_conf_mat = "save")
+    # train_Roberta_model_and_save_best(model_name = "roberta-base", dataset_path = "data/public_data/train/track_a/eng.csv", freeze_layers = True, freeze_to_layer = 12, loRa = False)
 
-load_and_validate_Roberta_model("roberta-base","./results/roberta-base_2024-12-16_19-13-00/best_model.pth","data/public_data/train/track_a/eng.csv", plot_conf_mat = "save")
+    # model = RobertaModel.from_pretrained("roberta-base")
+
+    # lora_config = LoraConfig(
+    #     task_type=TaskType.SEQ_CLS, r=1, lora_alpha=1, lora_dropout=0.1
+    # )
+
+    # model = get_peft_model(model, lora_config)
+
+    # print(model)
+
