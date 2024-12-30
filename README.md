@@ -88,7 +88,38 @@ Trainer expects the model to compute the loss and to return it as the first row 
 When the number of the examples in the test set which is given to the trainer.predict() method is not divisible by the number which is set for the 'per_device_eval_batch_size' in the TrainigArguments the number of returnt predictions is dropped to the nearest number that is divisable. 
 
 #### Workaround
-Just accepting it. 
+Input a divisible number of examples.
+
+## Trained Models 
+
+### roberta-base_2024-12-16_19-13-00
+
+#### CustomClassifier
+- model_name = "roberta-base" 
+- model_type = RobertModel 
+- classifier_size = 768 
+- dropout_rate = 0.3 
+- num_classes = 5
+
+#### Dataset Configurations
+- split_ratio = 0.95 
+- random_state = 123 
+
+#### Freeze Layers 
+- not used 
+
+#### loRa
+- not used 
+
+#### Training Arguments 
+- num_train_epochs = 1
+- per_device_train_batch_size = 4 
+- warmup_steps = 500
+- weight_decay = 0.01
+
+#### Performance 
+- 
+
 
 
 ## Paperinhalt 
