@@ -193,7 +193,7 @@ def train_Roberta_model_and_save_best(model_name,dataset_path, freeze_layers = F
     
     training_args = TrainingArguments(
         output_dir=save_file_path,
-        num_train_epochs=10,
+        num_train_epochs=2,
         per_device_train_batch_size=6,
         per_device_eval_batch_size=6,
         warmup_steps=500,
@@ -229,6 +229,19 @@ def train_Roberta_model_and_save_best(model_name,dataset_path, freeze_layers = F
     results = trainer.evaluate()
     print(results)
     model = CustomClassifier(model_name, RobertaModel, 768)
+    if loRa: 
+        lora_config = LoraConfig(
+            task_type=TaskType.SEQ_CLS, r=1, 
+            lora_alpha=1, 
+            lora_dropout=0.1, 
+            target_modules = ["query", "value"],
+            modules_to_save = ["pre_classifier", "classifier"] # keep custom classification head trainable 
+        )
+        dummys = torch.zeros((2, 512), dtype=torch.long)
+        label_dummys = torch.zeros((2, 5), dtype=torch.float)
+        res = model(label_dummys,dummys, dummys, dummys) # to initialize LazyLinear layer to fit model output dimension to classification head input dimension   
+    
+        model = get_peft_model(model, lora_config)
     model.load_state_dict(torch.load(f"{trainer.state.best_model_checkpoint}/pytorch_model.bin",weights_only=True))
     torch.save(model, f"{save_file_path}/best_model.pth")
     
@@ -296,7 +309,7 @@ def load_and_validate_Roberta_model(model_name, model_path, dataset_path, plot_c
 #train_Roberta_model_and_save_best("roberta-base","data/public_data/train/track_a/eng.csv")
 if __name__ == "__main__": 
     # load_and_validate_Roberta_model("roberta-base","roberta-base_2024-12-16_19-13-00","data/public_data/train/track_a/eng.csv", plot_conf_mat = "save")
-    train_Roberta_model_and_save_best(model_name = "roberta-base", dataset_path = "data/public_data/train/track_a/eng.csv", freeze_layers = True, freeze_to_layer = 12, loRa = True)
+    train_Roberta_model_and_save_best(model_name = "roberta-base", dataset_path = "data/public_data/train/track_a/eng.csv", freeze_layers = False, freeze_to_layer = 12, loRa = True)
     # pretrain_Roberta_model(model_name = "distilbert/distilroberta-base", dataset_path = "data/public_data/train/track_a/eng.csv")
     #load_and_validate_Roberta_model("roberta-base","roberta-base_2024-12-16_19-13-00","data/public_data/train/track_a/eng.csv", plot_conf_mat = "save")
     #train_Roberta_model_and_save_best(model_name = "roberta-base", dataset_path = "data/public_data/train/track_a/eng.csv", freeze_layers = True, freeze_to_layer = 12, loRa = False)
