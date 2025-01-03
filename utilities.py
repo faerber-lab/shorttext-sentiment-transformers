@@ -31,7 +31,11 @@ def load_and_split_dataset(dataset_path, split_ratio=0.8):
     dataset = dataset.reset_index(drop=True)
     print(dataset.head())
     
-    training_set, validation_set = train_test_split(dataset, test_size=1-split_ratio, random_state=123)
+    if (split_ratio == 1.0):
+        training_set = dataset.reset_index(drop=True)
+        return training_set , []
+    
+    training_set, validation_set = train_test_split(dataset, test_size=float(1.0-split_ratio), random_state=123)
     
     training_set = training_set.reset_index(drop=True)
     validation_set = validation_set.reset_index(drop=True)
@@ -87,7 +91,7 @@ class CustomClassifier(torch.nn.Module):
         self.classifier = torch.nn.Linear(classifier_size, num_classes)
         self.sigmoid = torch.nn.Sigmoid()   
         
-    def forward(self, input_ids, attention_mask, token_type_ids):
+    def forward(self, labels, input_ids, attention_mask, token_type_ids):
         output_1 = self.l1(input_ids=input_ids, attention_mask=attention_mask, token_type_ids=token_type_ids)
         hidden_state = output_1[0]
         pooler = hidden_state[:, 0]
@@ -95,19 +99,36 @@ class CustomClassifier(torch.nn.Module):
         pooler = torch.nn.ReLU()(pooler)
         pooler = self.dropout(pooler)
         output = self.classifier(pooler)
-        #output = self.sigmoid(output)
-        return output
+        loss = nn.BCEWithLogitsLoss()(output, labels)
+        #print(f"{loss.shape=} {output.shape=}")
+        return loss, output
+    
+class T5Classifier(CustomClassifier):
+    
+    def forward(self, labels, input_ids, attention_mask, token_type_ids):
+        output_1 = self.l1(input_ids=input_ids, attention_mask=attention_mask, decoder_input_ids=token_type_ids)
+        hidden_state = output_1[0]
+        pooler = hidden_state[:, 0]
+        pooler = self.pre_classifier(pooler)
+        pooler = torch.nn.ReLU()(pooler)
+        pooler = self.dropout(pooler)
+        output = self.classifier(pooler)
+        loss = nn.BCEWithLogitsLoss()(output, labels)
+        #print(f"{loss.shape=} {output.shape=}")
+        return loss, output
     
 class CustomTrainer(Trainer):
-
-    def compute_loss(self, model, inputs, return_outputs=False,num_items_in_batch=None):
-        labels = inputs.pop("labels")
-        #print(inputs["input_ids"].shape)
-        outputs = model(**inputs)
-        loss = nn.BCEWithLogitsLoss()(outputs, labels)
-        outputs  = torch.cat((torch.zeros(1,outputs.size(1),device=device), outputs), dim=0) ## Add a column of zeros to the beginning of the tensor, Necessary because of a weird implementation of the Trainer class
-        #print(f"{outputs.shape=}")
-        return (loss, outputs) if return_outputs else loss
+    
+    #def compute_loss(self, model, inputs, return_outputs=False,num_items_in_batch=None):
+    #    #labels = inputs.pop("labels")
+    #    labels = inputs.get("labels")
+    #    #print(inputs["input_ids"].shape)
+    #    outputs = model(**inputs)
+    #    loss = nn.BCEWithLogitsLoss()(outputs, labels)
+    #    outputs  = torch.cat((torch.zeros(1,outputs.size(1),device=device), outputs), dim=0) ## Add a column of zeros to the beginning of the tensor, Necessary because of a weird implementation of the Trainer class
+    #    #print(f"{outputs.shape=}")
+    #    return (loss, outputs) if return_outputs else loss
+    #
     
     def save_model(self, output_dir: str = None, _internal_call=False):
         """
@@ -121,7 +142,6 @@ class CustomTrainer(Trainer):
         torch.save(self.model.state_dict(), model_path)
         if self.tokenizer is not None:
             torch.save(self.tokenizer, output_dir)
-        #torch.save(self.args, os.path.join(output_dir, self.TRAINING_ARGS_NAME))
     
 def compute_metrics(p):
         pred, labels = p
@@ -137,6 +157,8 @@ def compute_metrics(p):
 
 def compute_metrics_f1(p): 
     predictions, labels = p
+    #print(f"{predictions=} {labels=}")
+    labels = torch.tensor(labels)
     predictions = torch.tensor(predictions)
     predictions = torch.sigmoid(predictions)
     predictions = torch.round(predictions)
@@ -144,6 +166,8 @@ def compute_metrics_f1(p):
     # can raise a warning when there are no positive labels or predictions for one 
     # emotion in the passed data 
     precision, recall, f1, _ = precision_recall_fscore_support(labels, predictions, average='weighted')
+    labels = np.array(labels)
+    predictions = np.array(predictions)
     acc = accuracy_score(labels, predictions)
     return {'accuracy': acc, 'f1': f1, 'precision': precision, 'recall': recall}
         
@@ -176,9 +200,10 @@ def remove_all_files_and_folders_except_best_model(folder_path):
 def plot_confusion_matrix(predictions, save_path = None, file_name = None, show = True): 
 
     preds = predictions.predictions
-    preds = torch.tensor(preds)
+    preds = torch.tensor(preds,device=device)
     preds = torch.sigmoid(preds)
     preds = torch.round(preds)
+    ids = torch.tensor(predictions.label_ids,device=device)
 
     label_map = {
     'LABEL_0': 'Anger',
@@ -188,7 +213,7 @@ def plot_confusion_matrix(predictions, save_path = None, file_name = None, show 
     'LABEL_4': 'Surprise'
     }
 
-    cm = multilabel_confusion_matrix(predictions.label_ids, preds)
+    cm = multilabel_confusion_matrix(ids, preds)
 
     # label_map to labels
     labels = [label_map[f'LABEL_{i}'] for i in range(len(label_map))]
