@@ -5,7 +5,7 @@ from torch import nn
 
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 from transformers import AutoTokenizer, AutoModelForMaskedLM
-from transformers import RobertaModel, RobertaTokenizer, TrainingArguments, Trainer
+from transformers import RobertaModel, RobertaTokenizer, TrainingArguments, Trainer, RobertaConfig
 
 
 import os
@@ -81,6 +81,7 @@ def _prepare_data(text, label,tokenizer,max_len):
 class CustomClassifier(torch.nn.Module):
     def __init__(self,model_name,model_type, classifier_size, dropout_rate=0.3, num_classes=5):
         super(CustomClassifier, self).__init__()
+        self.config = RobertaConfig.from_pretrained(model_name)
         #self.l1 = RobertaModel.from_pretrained("roberta-base")
         #self.l1 = AutoModelForMaskedLM.from_pretrained("distilbert/distilroberta-base")
         #self.l1 = AutoModelForSeq2SeqLM.from_pretrained(model_name)#"google-t5/t5-small")
@@ -91,18 +92,55 @@ class CustomClassifier(torch.nn.Module):
         self.classifier = torch.nn.Linear(classifier_size, num_classes)
         self.sigmoid = torch.nn.Sigmoid()   
         
-    def forward(self, labels, input_ids, attention_mask, token_type_ids):
-        output_1 = self.l1(input_ids=input_ids, attention_mask=attention_mask, token_type_ids=token_type_ids)
+    def forward(
+        self, 
+        labels=None, 
+        input_ids=None, 
+        attention_mask=None, 
+        token_type_ids=None, 
+        inputs_embeds=None, 
+        output_attentions=None, 
+        output_hidden_states=None, 
+        return_dict=None
+        ):
+        # Pass inputs to the base model
+        if inputs_embeds is not None:
+            output_1 = self.l1(
+                inputs_embeds=inputs_embeds,
+                attention_mask=attention_mask,
+                token_type_ids=token_type_ids,
+                output_attentions=output_attentions,
+                output_hidden_states=output_hidden_states,
+                return_dict=return_dict
+            )
+        else:
+            output_1 = self.l1(
+                input_ids=input_ids,
+                attention_mask=attention_mask,
+                token_type_ids=token_type_ids,
+                output_attentions=output_attentions,
+                output_hidden_states=output_hidden_states,
+                return_dict=return_dict
+            )
+
+        # Extract hidden states and pooler output
         hidden_state = output_1[0]
-        pooler = hidden_state[:, 0]
+        pooler = hidden_state[:, 0]  # CLS token representation
         pooler = self.pre_classifier(pooler)
         pooler = torch.nn.ReLU()(pooler)
         pooler = self.dropout(pooler)
         output = self.classifier(pooler)
-        loss = nn.BCEWithLogitsLoss()(output, labels)
-        #print(f"{loss.shape=} {output.shape=}")
-        return loss, output
-    
+
+        # Compute loss if labels are provided
+        if labels is not None:
+            loss_fn = torch.nn.BCEWithLogitsLoss()
+            loss = loss_fn(output, labels)
+            return loss, output
+
+        return output
+
+
+
 class T5Classifier(CustomClassifier):
     
     def forward(self, labels, input_ids, attention_mask, token_type_ids):
