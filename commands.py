@@ -4,14 +4,69 @@ from utilities import *
 from peft import LoraConfig, TaskType, get_peft_model
 
 
+def pretrain_Roberta_model(model_name, dataset_path): 
+
+    tokenizer = RobertaTokenizer.from_pretrained(model_name)
+
+    training_set, validation_set = load_and_split_dataset(dataset_path, 0.95)
+
+    training_set = tokenize_dataset_for_pretraining(dataset = training_set, tokenizer = tokenizer) 
+    validation_set = tokenize_dataset_for_pretraining(dataset = validation_set, tokenizer = tokenizer) 
+
+    tokenizer.pad_token = tokenizer.eos_token
+    data_collator = transformers.DataCollatorForLanguageModeling(tokenizer = tokenizer, mlm_probability = 0.15)
+
+    model = AutoModelForMaskedLM.from_pretrained(model_name)
+
+    save_file_path = get_save_file_path(model_name = model_name)
+
+    training_args = TrainingArguments(
+        output_dir = save_file_path,
+        eval_strategy = "steps",
+        eval_steps = 100,
+        learning_rate = 2e-5,
+        num_train_epochs = 3,
+        weight_decay = 0.01,
+        
+        # logging 
+        logging_dir='./logs',
+
+        ## best model
+        load_best_model_at_end=True,
+        save_strategy="steps",
+        save_steps=100
+    )
+
+    trainer = Trainer(
+        model = model,
+        args = training_args,
+        train_dataset = training_set,
+        eval_dataset = validation_set,
+        data_collator = data_collator,
+        tokenizer = tokenizer,
+    )
+
+    trainer.train()
+
+
+
+
+
+
+
 def train_Roberta_model_and_save_best(model_name,dataset_path, freeze_layers = False, freeze_to_layer = 12, loRa = False):
     
     tokenizer = RobertaTokenizer.from_pretrained(model_name)
     
     training_set, validation_set = load_and_split_dataset(dataset_path, 0.95)
+    training_set_pretraining = tokenize_dataset_for_pretraining(training_set, tokenizer, 512)
+    print(training_set_pretraining[0])
+    
     training_set = tokenize_dataset(training_set, tokenizer, 512)
     validation_set = tokenize_dataset(validation_set, tokenizer, 512)
+
     
+
     model = CustomClassifier(model_name = model_name, model_type = RobertaModel, classifier_size = 768)
 
     # print name and type of all modules the model contains 
@@ -143,9 +198,9 @@ def load_and_validate_Roberta_model(model_name, model_path, dataset_path, plot_c
 
 #train_Roberta_model_and_save_best("roberta-base","data/public_data/train/track_a/eng.csv")
 if __name__ == "__main__": 
-    load_and_validate_Roberta_model("roberta-base","roberta-base_2024-12-16_19-13-00","data/public_data/train/track_a/eng.csv", plot_conf_mat = "save")
+    # load_and_validate_Roberta_model("roberta-base","roberta-base_2024-12-16_19-13-00","data/public_data/train/track_a/eng.csv", plot_conf_mat = "save")
     # train_Roberta_model_and_save_best(model_name = "roberta-base", dataset_path = "data/public_data/train/track_a/eng.csv", freeze_layers = True, freeze_to_layer = 12, loRa = False)
-
+    pretrain_Roberta_model(model_name = "distilbert/distilroberta-base", dataset_path = "data/public_data/train/track_a/eng.csv")
     # model = RobertaModel.from_pretrained("roberta-base")
 
     # lora_config = LoraConfig(

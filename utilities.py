@@ -38,6 +38,12 @@ def load_and_split_dataset(dataset_path, split_ratio=0.8):
     
     return training_set, validation_set
 
+def tokenize_dataset_for_pretraining(dataset, tokenizer): 
+
+    tokenized = [tokenizer(text) for text in dataset["text"]]
+    
+    return tokenized 
+
 def tokenize_dataset(dataset, tokenizer, max_len):
     targets = torch.tensor(
         list(zip(
@@ -49,6 +55,8 @@ def tokenize_dataset(dataset, tokenizer, max_len):
         )),
         dtype=torch.float
     )
+
+    print(dataset["text"])
     
     tokenized = [
         _prepare_data(text, label, tokenizer,max_len) for text, label in zip(dataset["text"], targets)
