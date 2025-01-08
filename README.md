@@ -19,10 +19,10 @@ git lfs pull
 ## Setup
 
 1. SSH on Hpc
-2. Load modules (has to be done only once)
-3. Create workspace
-4. Link workspace 
-5. Create Venv in workspace 
+2. Load modules (has to be done only for initial setup)
+3. Create workspace (has to be done only for initial setup)
+4. Link workspace (has to be done only for initial setup)
+5. Create Venv in workspace (has to be done only for initial setup)
 6. Run interactive job (you will be redirected to a compute node)
 7. Activate Venv 
 8. Run python script
@@ -55,7 +55,7 @@ ln -s <ws_link> <name>
 
 #### Create Venv In Workspace:
 ```
-virtualenv myvenv
+virtualenv <myvenv>
 ```
 
 #### Activate Venv:
@@ -114,6 +114,7 @@ Input a divisible number of examples.
 #### Training Arguments 
 - num_train_epochs = 1
 - per_device_train_batch_size = 4 
+- per_device_eval_batch_size = 4 
 - warmup_steps = 500
 - weight_decay = 0.01
 

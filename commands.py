@@ -8,7 +8,7 @@ from upycli import command
 
 def pretrain_Roberta_model(model_name, dataset_path): 
 
-    tokenizer = RobertaTokenizer.from_pretrained(model_name)
+    tokenizer = AutoTokenizer.from_pretrained(model_name)
 
     training_set, validation_set = load_and_split_dataset(dataset_path, 0.95)
 
@@ -49,6 +49,8 @@ def pretrain_Roberta_model(model_name, dataset_path):
     )
 
     trainer.train()
+
+    trainer.save_model(f"{save_file_path}/best_model")
 
 
 

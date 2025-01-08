@@ -43,7 +43,7 @@ def load_and_split_dataset(dataset_path, split_ratio=0.8):
     return training_set, validation_set
 
 def tokenize_dataset_for_pretraining(dataset, tokenizer): 
-
+    
     tokenized = [tokenizer(text) for text in dataset["text"]]
     
     return tokenized 
