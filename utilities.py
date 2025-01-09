@@ -210,7 +210,14 @@ def compute_metrics_f1(p):
     return {'accuracy': acc, 'f1': f1, 'precision': precision, 'recall': recall}
         
         
-def get_save_file_path(model_name):
+def get_save_file_path(model_name, category):
+    """
+    Generates the save file path from the current timestamp. 
+
+    Args:
+        model_name: Name of the model to be saved. 
+        category: The category of the model to save. 1 stands for 'pretraining' and 2 stands for 'classification'. 
+    """
     from datetime import datetime
 
     # Get the current date and time
@@ -218,7 +225,16 @@ def get_save_file_path(model_name):
 
     # Format the date and time
     formatted_date_time = now.strftime("%Y-%m-%d_%H-%M-%S")
-    return f"./results/{model_name}_{formatted_date_time}"
+
+    # choose category: 1 = pretraining, 2 = classification 
+    if category == 1: 
+        category = "pretraining"
+    elif category == 2: 
+        category = "classification"
+    else: 
+        print(f"{category} is no valid category. Valid categories are 1 for pretraining and 2 for classification.")
+
+    return f"./results/{category}/{model_name}_{formatted_date_time}"
 
 
 def remove_all_files_and_folders_except_best_model(folder_path):
