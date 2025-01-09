@@ -66,7 +66,7 @@ pip install -r requirements.txt
 
 #### Run Interactive Job:
 ```
-srun --ntasks=1 --cpus-per-task=1 --time=4:00:00 --mem-per-cpu=8000 --pty --nodes=1 --account=p_scads_llm_secrets --gpus-per-task=1 bash -l
+srun --ntasks=1 --cpus-per-task=1 --time=4:00:00 --mem-per-cpu=8000 --pty --nodes=1 --account=p_scads_llm_secrets --gres=gpu:1 bash -l
 ```
 
 activate venv inside job
@@ -132,3 +132,13 @@ Input a divisible number of examples.
 6. Explainability SHAP
 7. Vergleich mit anderen Modellen / Menschen 
 8. Quellen
+
+
+## ToDo
+
+1. Training anwerfen 
+2. Powerlaws ankucken für Auswertung 
+3. eventuell Datenset-Vorverarbeitung implementieren 
+4. Paper schreiben anfangen 
+- In Related Word: Paper das sagt, dass Transformer / Encoder gut geeignet sind, bzw. mit anderen Verfahren wie Word2Vec / LSTM vergleichen -> Attention gut, um komplexe Zusammenhänge im Text mit einzubeziehen, ist wichtig für Sentimentanalysis -> auf Bert Paper / Roberta Paper verweisen, Paper "HowToFineTuneBertForTextClassification" -> weiteres Pretraining 
+- In Methodology: Allgemein: RoBerta-model zur Encodierung der Eingaben + Classification Head, Vorgehen darlegen: 1. Kleines Modell mit layer Freeze / loRa 2. normales RoBerta Modell 3. RoBerta Modell mit Pretraining -> Vergleich nochmal mit sysnthetischen Datensätzen   
