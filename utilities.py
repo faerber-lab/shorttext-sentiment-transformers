@@ -234,7 +234,9 @@ def get_save_file_path(model_name, category):
     else: 
         print(f"{category} is no valid category. Valid categories are 1 for pretraining and 2 for classification.")
 
-    return f"./results/{category}/{model_name}_{formatted_date_time}"
+    model_name = f"{model_name}_{formatted_date_time}"
+        
+    return f"./results/{category}/{model_name}", model_name
 
 
 def remove_all_files_and_folders_except_best_model(folder_path):

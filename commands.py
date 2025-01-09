@@ -57,18 +57,16 @@ def train_with_pretrained_model_and_save_best(dataset_path = "data/public_data/t
 
     if model_to_pretrain is not None and pretrained_model is None: 
         
-        save_file_path = get_save_file_path(model_name = model_to_pretrain, category = 1)
+        save_file_path, pretrained_model_name = get_save_file_path(model_name = model_to_pretrain, category = 1)
 
         # further pretrain model with MaskedLanguageModeling objective 
         pretrain_model(model_name = model_to_pretrain, dataset_path = dataset_path, save_file_path = save_file_path)
-
-        pretrained_model_name = model_to_pretrain
 
         # load tokenizer from further pretrained model 
         tokenizer = AutoTokenizer.from_pretrained(save_file_path)
 
         # load pretrained model with classification head 
-        model = transformers.RobertaForSequenceClassification.from_pretrained(pretrained_model_name_or_path = save_file_path, num_labels = 5)
+        model = transformers.RobertaForSequenceClassification.from_pretrained(save_file_path, num_labels = 5)
 
     elif model_to_pretrain is None and pretrained_model is not None: 
 
@@ -78,7 +76,7 @@ def train_with_pretrained_model_and_save_best(dataset_path = "data/public_data/t
         tokenizer = AutoTokenizer.from_pretrained(pretrained_model)
 
         # load pretrained model with classification head 
-        model = transformers.RobertaForSequenceClassification.from_pretrained(pretrained_model, num_labels = 5)
+        model = transformers.RobertaForSequenceClassification.from_pretrained(f"./results/pretraining/{pretrained_model}/best_model", num_labels = 5)
 
     else: 
         print(f"Parameter combination of model_to_pretrain = {model_to_pretrain} and pretrained_model = {pretrained_model} is not valid.")
@@ -112,7 +110,7 @@ def train_with_pretrained_model_and_save_best(dataset_path = "data/public_data/t
             param.requires_grad = False
 
     # training arguments 
-    save_file_path = get_save_file_path(model_name = pretrained_model_name, category = 2)
+    save_file_path, _ = get_save_file_path(model_name = pretrained_model_name, category = 2)
 
     training_args = TrainingArguments(
         output_dir=save_file_path,
@@ -206,7 +204,7 @@ def train_auto_model_and_save_best(model_name, dataset_path, freeze_layers = Fal
         for param in model.l1.roberta.encoder.layer[:freeze_to_layer-1].parameters(): 
             param.requires_grad = False
     
-    save_file_path = get_save_file_path(model_name)
+    save_file_path, _ = get_save_file_path(model_name, category = 2)
     
     training_args = TrainingArguments(
         output_dir=save_file_path,
@@ -304,7 +302,7 @@ def train_Roberta_model_and_save_best(model_name,dataset_path, freeze_layers = F
         for param in model.l1.encoder.layer[:freeze_to_layer-1].parameters(): 
             param.requires_grad = False
     
-    save_file_path = get_save_file_path(model_name)
+    save_file_path, _  = get_save_file_path(model_name, category = 2)
     
     training_args = TrainingArguments(
         output_dir=save_file_path,
