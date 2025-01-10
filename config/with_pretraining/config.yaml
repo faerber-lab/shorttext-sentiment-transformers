@@ -1,0 +1,30 @@
+
+# if a new model should be pretrained the parameter "pretrained_model" 
+# for the classification is not needed 
+
+pretraining: 
+  model_to_pretrain: "roberta-base"
+  dataset_path: "data/public_data/train/track_a/eng.csv"
+  extended_dataset: False 
+
+  training:
+    train_epochs: 1
+    learning_rate: 0.00002 
+    weight_decay: 0.01 
+
+classification: 
+  dataset_path: "data/public_data/train/track_a/eng.csv"
+  custom: False # if custom is true an additional parameter "classifier_size" should be specified
+  extended_dataset: False 
+  freeze_layers: False 
+  freeze_to_layer: 12
+  loRa: False 
+
+  training:
+    train_epochs: 10
+    learning_rate: 0.00002
+    per_device_train_batch_size: 6
+    per_device_eval_batch_size: 6
+    warmup_steps: 500
+    weight_decay: 0.01
+

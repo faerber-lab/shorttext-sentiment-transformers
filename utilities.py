@@ -246,6 +246,8 @@ def remove_all_files_and_folders_except_best_model(folder_path):
     for file in os.listdir(folder_path):
         if file == "best_model.pth":
             best_model = file
+        elif file == "results.yaml": 
+            pass
         else:
             try:
                 shutil.rmtree(f"{folder_path}/{file}")

@@ -1,0 +1,25 @@
+classification:
+  custom: false
+  dataset_path: data/public_data/train/track_a/eng.csv
+  extended_dataset: false
+  freeze_layers: false
+  freeze_to_layer: 12
+  loRa: false
+  pretrained_model: roberta-base_2025-01-03_17-14-47
+  training:
+    learning_rate: 2.0e-05
+    per_device_eval_batch_size: 6
+    per_device_train_batch_size: 6
+    train_epochs: 1
+    warmup_steps: 500
+    weight_decay: 0.01
+results:
+  epoch: 1.0
+  eval_accuracy: 0.3695652173913043
+  eval_f1: 0.6512819654674361
+  eval_loss: 0.40819334983825684
+  eval_precision: 0.6957041970199864
+  eval_recall: 0.6351351351351351
+  eval_runtime: 0.9883
+  eval_samples_per_second: 140.647
+  eval_steps_per_second: 24.284

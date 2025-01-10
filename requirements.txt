@@ -16,5 +16,8 @@ tensorboardX
 # python command 
 upycli
 
+# read/write yamls
+pyyaml
+
 # python spec
 # logging
