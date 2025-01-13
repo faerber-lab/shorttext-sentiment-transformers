@@ -5,6 +5,7 @@
 pretraining: 
   model_to_pretrain: "roberta-base"
   dataset_path: "data/public_data/train/track_a/eng.csv"
+  training_set_split: 0.8
   extended_dataset: False 
 
   training:
@@ -14,6 +15,7 @@ pretraining:
 
 classification: 
   dataset_path: "data/public_data/train/track_a/eng.csv"
+  training_set_split: 0.8
   custom: False # if custom is true an additional parameter "classifier_size" should be specified
   extended_dataset: False 
   freeze_layers: False 

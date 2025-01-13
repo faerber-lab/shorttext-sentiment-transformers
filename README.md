@@ -134,11 +134,16 @@ Input a divisible number of examples.
 8. Quellen
 
 
-## ToDo
+## Besprechung: 
+1. Powerlaws bei Auswertung mit einbeziehen? 
+2. eventuell Datenset-Vorverarbeitung implementieren? 
+3. Welche Variationen des Attention Heads? 
+4. Subsection "Evaluation Metrics" vielleicht in Kaptitel 4 verschieben 
+5. Wo Beschreibung des Datensetsplits + Trainingsargumenten einfügen? 
+6. Wo SHAP einfügen? 
+7. Noch mehr über die BERT models schreiben? 
+8. Datensetsplitkombination von Pre-Training und Fine-Tuning
 
-1. Training anwerfen 
-2. Powerlaws ankucken für Auswertung 
-3. eventuell Datenset-Vorverarbeitung implementieren 
-4. Paper schreiben anfangen 
+
+## ToDos: 
 - In Related Word: Paper das sagt, dass Transformer / Encoder gut geeignet sind, bzw. mit anderen Verfahren wie Word2Vec / LSTM vergleichen -> Attention gut, um komplexe Zusammenhänge im Text mit einzubeziehen, ist wichtig für Sentimentanalysis -> auf Bert Paper / Roberta Paper verweisen, Paper "HowToFineTuneBertForTextClassification" -> weiteres Pretraining 
-- In Methodology: Allgemein: RoBerta-model zur Encodierung der Eingaben + Classification Head, Vorgehen darlegen: 1. Kleines Modell mit layer Freeze / loRa 2. normales RoBerta Modell 3. RoBerta Modell mit Pretraining -> Vergleich nochmal mit sysnthetischen Datensätzen   

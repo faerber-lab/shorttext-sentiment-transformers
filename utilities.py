@@ -243,10 +243,15 @@ def remove_all_files_and_folders_except_best_model(folder_path):
     import os
     import shutil
     best_model = None
+
+    print(os.listdir(folder_path))
+
     for file in os.listdir(folder_path):
         if file == "best_model.pth":
             best_model = file
         elif file == "results.yaml": 
+            pass
+        elif file == "best_model": 
             pass
         else:
             try:

@@ -8,11 +8,25 @@ import yaml
 #def train_t5_model_and_save_best(model_name,dataset_path, freeze_layers = False, freeze_to_layer = 12, loRa = False):
 
 
-def pretrain_model(model_name, dataset_path, save_file_path, train_epochs, learning_rate, weight_decay, extended_dataset): 
+def pretrain_model(config, save_folder_path, save_folder_name): 
+
+    # load config 
+    model_name = config["model_to_pretrain"]
+    dataset_path = config["dataset_path"]
+    train_set_split = config["training_set_split"]
+    extended_dataset = config["extended_dataset"]
+
+    # load pretraining args
+    pretraining_args = config["training"]
+
+    train_epochs = pretraining_args["train_epochs"]
+    learning_rate = pretraining_args["learning_rate"]
+    weight_decay = pretraining_args["weight_decay"]
+
 
     tokenizer = AutoTokenizer.from_pretrained(model_name)
 
-    training_set, validation_set = load_and_split_dataset(dataset_path, 0.95)
+    training_set, validation_set = load_and_split_dataset(dataset_path, train_set_split)
 
     if extended_dataset: 
         training_set_extension, _ = load_and_split_dataset("data/public_data/train/track_a/extended_eng.csv",1.0)
@@ -27,7 +41,7 @@ def pretrain_model(model_name, dataset_path, save_file_path, train_epochs, learn
     model = AutoModelForMaskedLM.from_pretrained(model_name)
 
     training_args = TrainingArguments(
-        output_dir = save_file_path,
+        output_dir = save_folder_path,
         eval_strategy = "steps",
         eval_steps = 100,
         learning_rate = learning_rate,
@@ -35,7 +49,7 @@ def pretrain_model(model_name, dataset_path, save_file_path, train_epochs, learn
         weight_decay = weight_decay,
         
         # logging 
-        logging_dir='./logs',
+        logging_dir=f"./logs/pretraining/{save_folder_name}",
 
         ## best model
         load_best_model_at_end=True,
@@ -54,7 +68,18 @@ def pretrain_model(model_name, dataset_path, save_file_path, train_epochs, learn
 
     trainer.train()
 
-    trainer.save_model(f"{save_file_path}/best_model")
+    results = trainer.evaluate()
+
+    trainer.save_model(f"{save_folder_path}/best_model")
+
+    # save results 
+    config["results"] = results 
+
+    with open(f"{save_folder_path}/results.yaml", "w") as file:
+        yaml.dump(config, file)
+
+    remove_all_files_and_folders_except_best_model(save_folder_path)
+
 
 def train_with_pretrained_model_and_save_best(config_path): 
 
@@ -66,6 +91,7 @@ def train_with_pretrained_model_and_save_best(config_path):
     classification_config = config["classification"]
 
     dataset_path = classification_config["dataset_path"]
+    train_set_split = classification_config["training_set_split"]
     custom = classification_config["custom"]
     extend_dataset = classification_config["extended_dataset"]
     freeze_layers = classification_config["freeze_layers"]
@@ -84,21 +110,9 @@ def train_with_pretrained_model_and_save_best(config_path):
 
     # look if a model should be pretrained or a pretrained model should be loaded 
     if "pretraining" in config.keys(): 
-        
-        # load pretraining config 
-        pretraining_config = config["pretraining"]
 
-        model_to_pretrain = pretraining_config["model_to_pretrain"]
         pretrained_model = None
-        pretraining_dataset_path = pretraining_config["dataset_path"]
-        pretraining_extended_dataset = pretraining_config["extended_dataset"]
-
-        # load pretraining args
-        pretraining_args = pretraining_config["training"]
-
-        pretraining_epochs = pretraining_args["train_epochs"]
-        pretraining_learning_rate = pretraining_args["learning_rate"]
-        pretraining_weight_decay = pretraining_args["weight_decay"]
+        model_to_pretrain = config["pretraining"]["model_to_pretrain"]
 
     else: 
 
@@ -111,9 +125,7 @@ def train_with_pretrained_model_and_save_best(config_path):
         save_file_path, pretrained_model_name = get_save_file_path(model_name = model_to_pretrain, category = 1)
 
         # further pretrain model with MaskedLanguageModeling objective 
-        pretrain_model(model_name = model_to_pretrain, dataset_path = pretraining_dataset_path, 
-                       save_file_path = save_file_path, train_epochs = pretraining_epochs, learning_rate = pretraining_learning_rate,
-                       weight_decay = pretraining_weight_decay, extended_dataset = pretraining_extended_dataset)
+        pretrain_model(config["pretraining"], save_file_path, pretrained_model_name)
 
         # load tokenizer from further pretrained model 
         tokenizer = AutoTokenizer.from_pretrained(f"{save_file_path}/best_model")
@@ -164,7 +176,7 @@ def train_with_pretrained_model_and_save_best(config_path):
     print(model)
 
     # load dataset 
-    training_set, validation_set = load_and_split_dataset(dataset_path, 0.95)
+    training_set, validation_set = load_and_split_dataset(dataset_path, train_set_split)
 
     # extend dataset with synthetic training data from ChatGPT
     if extend_dataset:
@@ -200,7 +212,7 @@ def train_with_pretrained_model_and_save_best(config_path):
                 param.requires_grad = False
 
     # training arguments 
-    save_file_path, _ = get_save_file_path(model_name = pretrained_model_name, category = 2)
+    save_file_path, fine_tuned_model_name = get_save_file_path(model_name = pretrained_model_name, category = 2)
 
     training_args = TrainingArguments(
         output_dir = save_file_path,
@@ -210,7 +222,7 @@ def train_with_pretrained_model_and_save_best(config_path):
         learning_rate = learning_rate,
         warmup_steps = warmup_steps,
         weight_decay = weight_decay,
-        logging_dir = './logs',
+        logging_dir = f"./logs/classification/{fine_tuned_model_name}",
         eval_strategy = 'steps',  # Evaluate at the end of each epoch
         eval_steps = 100,
         eval_on_start = True,
@@ -520,7 +532,7 @@ def load_and_validate_Roberta_model(model_name, model_path, dataset_path, plot_c
 if __name__ == "__main__": 
     # load_and_validate_Roberta_model("roberta-base","roberta-base_2024-12-16_19-13-00","data/public_data/train/track_a/eng.csv", plot_conf_mat = "save")
     # train_Roberta_model_and_save_best(model_name = "roberta-base", dataset_path = "data/public_data/train/track_a/eng.csv", freeze_layers = False, freeze_to_layer = 12, loRa = True)
-    train_Roberta_model_and_save_best(model_name = "roberta-large", dataset_path = "Semeval_Task/data/public_data/train/track_a/eng.csv", freeze_layers = True, freeze_to_layer = 24, loRa = False)
+    # train_Roberta_model_and_save_best(model_name = "roberta-large", dataset_path = "Semeval_Task/data/public_data/train/track_a/eng.csv", freeze_layers = True, freeze_to_layer = 24, loRa = False)
     # pretrain_Roberta_model(model_name = "distilbert/distilroberta-base", dataset_path = "data/public_data/train/track_a/eng.csv")
     #load_and_validate_Roberta_model("roberta-base","roberta-base_2024-12-16_19-13-00","data/public_data/train/track_a/eng.csv", plot_conf_mat = "save")
     #train_Roberta_model_and_save_best(model_name = "roberta-base", dataset_path = "data/public_data/train/track_a/eng.csv", freeze_layers = True, freeze_to_layer = 12, loRa = False)
