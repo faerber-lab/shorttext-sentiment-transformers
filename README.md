@@ -134,7 +134,7 @@ Input a divisible number of examples.
 8. Quellen
 
 
-## Besprechung: 
+## Besprechung 14.01.2025: 
 1. Powerlaws bei Auswertung mit einbeziehen? 
 2. eventuell Datenset-Vorverarbeitung implementieren? 
 3. Welche Variationen des Attention Heads? 
@@ -143,6 +143,23 @@ Input a divisible number of examples.
 6. Wo SHAP einfügen? 
 7. Noch mehr über die BERT models schreiben? 
 8. Datensetsplitkombination von Pre-Training und Fine-Tuning
+
+### Ergebnis: 
+1. Werden sich Gedanken drüber gemacht 
+2. Ja machen, mit in Metholodgy
+3. Nur Size anpassen -> Größe immer weiter verdoppeln + Ergebnis aufzeichnen
+4. Ne bleibt so, 
+5. In Methodology, 3.2 allgemein über das Trainingsset 
+6. Subsection "Explainability" bei Methodik 
+7. Ne, aber Subsection mit Beschreibung Classification Heads
+8. Pretraining einmal auf normalen Trainingsset und einmal auf extended Trainingsset 
+
+
+- bei Methodology Subsection für Implimentation hinzufügen 
+
+ 
+
+
 
 
 ## ToDos: 
