@@ -30,6 +30,7 @@ def pretrain_model(config, save_folder_path, save_folder_name):
 
     if extended_dataset: 
         training_set_extension, _ = load_and_split_dataset("data/public_data/train/track_a/extended_eng.csv",1.0)
+        print(training_set_extension)
         training_set = pd.concat([training_set, training_set_extension], axis=0, ignore_index=True)
 
     training_set = tokenize_dataset_for_pretraining(dataset = training_set, tokenizer = tokenizer) 
@@ -53,6 +54,7 @@ def pretrain_model(config, save_folder_path, save_folder_name):
 
         ## best model
         load_best_model_at_end=True,
+        metric_for_best_model = "loss",
         save_strategy="steps",
         save_steps=100
     )
@@ -151,7 +153,7 @@ def train_with_pretrained_model_and_save_best(config_path):
         pretrained_model_name = pretrained_model
 
         # load tokenizer from further pretrained model 
-        tokenizer = AutoTokenizer.from_pretrained(f"./results/pretraining/{pretrained_model}/best_model")
+        tokenizer = AutoTokenizer.from_pretrained(pretrained_model)
 
         # load pretrained model with classification head 
         if custom:
@@ -159,7 +161,7 @@ def train_with_pretrained_model_and_save_best(config_path):
             # load the classifier size 
             classifier_size = classification_config["classifier_size"]
 
-            model = CustomClassifier(model_name = f"./results/pretraining/{pretrained_model}/best_model", model_type = transformers.AutoModelForMaskedLM, classifier_size = classifier_size) # maybe try bigger classigier_size? 
+            model = CustomClassifier(model_name = pretrained_model, model_type = transformers.AutoModelForMaskedLM, classifier_size = classifier_size) # maybe try bigger classigier_size? 
 
             # to initialize LazyLinear layer to fit model output dimension to classification head input dimension
             dummys = torch.zeros((2, 512), dtype=torch.long)
@@ -167,7 +169,7 @@ def train_with_pretrained_model_and_save_best(config_path):
             model(label_dummys,dummys, dummys, dummys) 
 
         else:
-            model = transformers.AutoModelForSequenceClassification.from_pretrained(f"./results/pretraining/{pretrained_model}/best_model", num_labels = 5)
+            model = transformers.AutoModelForSequenceClassification.from_pretrained(pretrained_model, num_labels = 5)
 
     else: 
         print(f"Parameter combination of model_to_pretrain = {model_to_pretrain} and pretrained_model = {pretrained_model} is not valid.")
