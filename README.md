@@ -157,6 +157,11 @@ Input a divisible number of examples.
 
 - bei Methodology Subsection für Implimentation hinzufügen 
 
+## Besprechung 28.01.2025: 
+1. Sigmoid-layer bei Custom Classification Head nicht benutzt? 
+2. Paper über Größe Classification Head. 
+
+
  
 
 
