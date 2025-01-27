@@ -12,6 +12,7 @@ import os
 import seaborn as sns
 import matplotlib.pyplot as plt
 
+import re
 import numpy as np 
 
 from sklearn.metrics import accuracy_score, precision_recall_fscore_support, multilabel_confusion_matrix
@@ -29,6 +30,7 @@ def load_and_split_dataset(dataset_path, split_ratio=0.8):
     dataset = pd.read_csv(dataset_path)
     dataset = dataset.dropna()
     dataset = dataset.reset_index(drop=True)
+    dataset = clean_dataset(dataset)
     print(dataset.head())
     
     if (split_ratio == 1.0):
@@ -47,6 +49,22 @@ def tokenize_dataset_for_pretraining(dataset, tokenizer):
     tokenized = [tokenizer(text) for text in dataset["text"]]
     
     return tokenized 
+def clean_text(text):
+    # Convert to lowercase
+    text = text.lower()
+    # Remove hyperlinks
+    text = re.sub(r'http\S+|www\S+|https\S+', '', text, flags=re.MULTILINE)
+    # Remove punctuation
+    text = re.sub(r'[^\w\s]', '', text)
+    return text
+
+def clean_dataset(dataset):
+    if 'text' in dataset.columns:
+        dataset['text'] = dataset['text'].apply(clean_text)
+    else:
+        raise ValueError("Dataset must contain a 'text' column.")
+    
+    return dataset
 
 def tokenize_dataset(dataset, tokenizer, max_len):
     targets = torch.tensor(
