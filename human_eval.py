@@ -20,7 +20,7 @@ def load_dataset():
 
     # Load dataset
     dataset_path = request.form['dataset_path']
-    dataset_path = "data/public_data/dev/track_a/eng.csv"
+    dataset_path = "data/track_a/dev/eng.csv"
     try:
         data = pd.read_csv(dataset_path)
         if 'id' not in data.columns or 'text' not in data.columns:
@@ -54,12 +54,16 @@ def get_example():
     # Convert to JSON format and return
     return jsonify(examples[['id', 'text']].to_dict(orient='records'))
 
-
 @app.route('/submit_classification', methods=['POST'])
 def submit_classification():
     global classified_data
 
     classifications = request.json['classifications']
+    for classification in classifications:
+        # Ensure labels are set to zero if none are picked
+        if not any(classification.get(label.lower(), 0) for label in classes):
+            classification.update({label.lower(): 0 for label in classes})
+    
     classified_data.extend(classifications)
 
     return jsonify({"message": "Classifications submitted."})
@@ -76,8 +80,6 @@ def save_classifications():
         return jsonify({"message": f"Classified data saved to {output_path}."})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
-
 
 if __name__ == '__main__':
     app.run(debug=True)

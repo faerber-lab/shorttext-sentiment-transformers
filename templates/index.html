@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Human Classification Tool</title>
+</head>
+<body>
+    <h1>Human Classification Tool</h1>
+    
+    <div>
+        <label for="dataset_path">Dataset Path:</label>
+        <input type="text" id="dataset_path">
+        <button onclick="loadDataset()">Load Dataset</button>
+    </div>
+    
+    <div id="classification-section" style="display:none;">
+        <h2>Classify Examples</h2>
+        <label for="num_examples">Number of Examples:</label>
+        <input type="number" id="num_examples" value="1">
+        <button onclick="getExamples()">Get Examples</button>
+        
+        <div id="examples"></div>
+        <button onclick="saveClassifications()">Save Classifications</button>
+    </div>
+    
+    <script>
+        const classes = ["Anger", "Fear", "Joy", "Sadness", "Surprise"]; // Define classes globally
+
+        async function loadDataset() {
+            const datasetPath = document.getElementById('dataset_path').value;
+            const response = await fetch('/load_dataset', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: `dataset_path=${encodeURIComponent(datasetPath)}`
+            });
+            
+            const result = await response.json();
+            if (response.ok) {
+                alert(result.message);
+                document.getElementById('classification-section').style.display = 'block';
+            } else {
+                alert(result.error);
+            }
+        }
+
+        async function getExamples() {
+            const numExamples = document.getElementById('num_examples').value;
+        
+            const response = await fetch(`/get_example?num_examples=${numExamples}`);
+            const result = await response.json();
+        
+            const examplesDiv = document.getElementById('examples');
+            examplesDiv.innerHTML = ''; // Clear existing examples
+        
+            if (response.ok) {
+                if (result.message) {
+                    alert(result.message); // No more examples
+                    return;
+                }
+        
+                // Render the examples
+                result.forEach((example) => {
+                    const exampleDiv = document.createElement('div');
+                    exampleDiv.classList.add('example');
+                    exampleDiv.setAttribute('data-id', example.id); // Add unique identifier
+                    exampleDiv.innerHTML = `
+                        <p><strong>ID:</strong> ${example.id}</p>
+                        <p><strong>Text:</strong> ${example.text}</p>
+                        <p>Assign Class:</p>
+                        ${classes.map(cls => `
+                            <button data-label="${cls}" onclick="classify('${example.id}', '${cls}')">${cls}</button>
+                        `).join('')}
+                    `;
+                    examplesDiv.appendChild(exampleDiv);
+                });
+            } else {
+                alert(result.error || "An error occurred.");
+            }
+        }
+        
+        
+        let classifications = {};
+
+        function classify(id, label) {
+            // Initialize the classification list for the example if not already present
+            if (!classifications[id]) {
+                classifications[id] = new Set(); // Use a Set to handle unique labels
+            }
+        
+            const exampleDiv = document.querySelector(`.example[data-id="${id}"]`);
+            const button = exampleDiv.querySelector(`button[data-label="${label}"]`);
+        
+            // Toggle label selection
+            if (classifications[id].has(label)) {
+                classifications[id].delete(label); // Unselect the label
+                button.style.backgroundColor = ''; // Reset button color
+                button.style.color = ''; // Reset text color
+                button.textContent = label; // Reset button text
+            } else {
+                classifications[id].add(label); // Select the label
+                button.style.backgroundColor = 'green'; // Highlight button
+                button.style.color = 'white'; // Change text color
+                button.textContent = `Selected: ${label}`; // Update button text
+            }
+        
+            // Optional: Display currently selected labels below the example
+            const selectedLabels = Array.from(classifications[id]);
+            const confirmation = exampleDiv.querySelector('.confirmation');
+            if (selectedLabels.length > 0) {
+                if (!confirmation) {
+                    const newConfirmation = document.createElement('p');
+                    newConfirmation.classList.add('confirmation');
+                    newConfirmation.innerHTML = `<strong>Selected labels:</strong> ${selectedLabels.join(', ')}`;
+                    exampleDiv.appendChild(newConfirmation);
+                } else {
+                    confirmation.innerHTML = `<strong>Selected labels:</strong> ${selectedLabels.join(', ')}`;
+                }
+            } else if (confirmation) {
+                exampleDiv.removeChild(confirmation); // Remove confirmation text if no labels are selected
+            }
+        }
+
+        
+
+        async function saveClassifications() {
+            const outputPath = prompt("Enter the output file path:");
+        
+            // Ensure all examples are included, even those without selected labels
+            const examples = document.querySelectorAll('.example');
+            examples.forEach(example => {
+                const id = example.getAttribute('data-id');
+                if (!classifications[id]) {
+                    classifications[id] = new Set(); // Add empty set if no labels selected
+                }
+            });
+        
+            // Generate one-hot encoded output
+            const outputData = Object.entries(classifications).map(([id, labels]) => {
+                // Create a one-hot vector for the labels, defaulting to 0 for unselected labels
+                const oneHot = classes.map(cls => (labels.has(cls) ? 1 : 0));
+                return {
+                    id,
+                    ...Object.fromEntries(classes.map((cls, idx) => [cls, oneHot[idx]])), // Add one-hot values with label names as keys
+                };
+            });
+        
+            // Send the data to the backend
+            const response = await fetch('/save_classifications', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ data: outputData, output_path: outputPath }),
+            });
+        
+            const result = await response.json();
+            if (response.ok) {
+                alert(result.message);
+            } else {
+                alert(result.error);
+            }
+        }
+        
+        
+        
+    </script>
+</body>
+</html>
