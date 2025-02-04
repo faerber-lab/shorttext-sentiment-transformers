@@ -11,20 +11,22 @@
 #SBATCH --mail-user=nuni18092003@gmail.com
 #SBATCH --account=p_scads_llm_secrets
 
-source semevalenv/bin/activate
+source ./../semevalenv/bin/activate
 export HF_HOME=
 
-python Semeval_Task/commands.py train_Roberta_model_and_save_best \
-        --model_name roberta-base \
-        --dataset_path Semeval_Task/data/track_a/train/eng.csv \
-        --classification_head_size 768 \
-        --head_type fc \
-        --save_as fc_768_4 \
-        --extended yes \
-        --extended_split 0.1 \
-        --classification_layers 4 \
-        --attention_dim 256 \
-        --num_attention_heads 4
+# python Semeval_Task/commands.py train_Roberta_model_and_save_best \
+        # --model_name roberta-base \
+        # --dataset_path Semeval_Task/data/track_a/train/eng.csv \
+        # --classification_head_size 768 \
+        # --head_type fc \
+        # --save_as fc_768_4 \
+        # --extended yes \
+        # --extended_split 0.1 \
+        # --classification_layers 4 \
+        # --attention_dim 256 \
+        # --num_attention_heads 4
 
+python commands.py train_with_pretrained_model_and_save_best \
+        --config_path ./config/with_pretraining/config.yaml
 
 #SBATCH --gres=gpu:1

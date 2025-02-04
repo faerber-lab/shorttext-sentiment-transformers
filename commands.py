@@ -22,6 +22,7 @@ def pretrain_model(config, save_folder_path, save_folder_name):
     train_epochs = pretraining_args["train_epochs"]
     learning_rate = pretraining_args["learning_rate"]
     weight_decay = pretraining_args["weight_decay"]
+    
 
 
     tokenizer = AutoTokenizer.from_pretrained(model_name)
@@ -29,7 +30,8 @@ def pretrain_model(config, save_folder_path, save_folder_name):
     training_set, validation_set = load_and_split_dataset(dataset_path, train_set_split)
 
     if extended_dataset: 
-        training_set_extension, _ = load_and_split_dataset("data/public_data/train/track_a/extended_eng.csv",1.0)
+        extended_split = config["extended_split"]
+        training_set_extension, _ = load_and_split_dataset("data/track_a/train/extended_split_data.csv",extended_split)
         print(training_set_extension)
         training_set = pd.concat([training_set, training_set_extension], axis=0, ignore_index=True)
 
@@ -99,6 +101,7 @@ def train_with_pretrained_model_and_save_best(config_path):
     freeze_layers = classification_config["freeze_layers"]
     freeze_to_layer = classification_config["freeze_to_layer"]
     loRa = classification_config["loRa"]
+    extended_split = classification_config["extended_split"]
 
     # load training args
     classification_args = classification_config["training"]
@@ -126,6 +129,9 @@ def train_with_pretrained_model_and_save_best(config_path):
         
         save_file_path, pretrained_model_name = get_save_file_path(model_name = model_to_pretrain, category = 1)
 
+        config["pretraining"]["extended_dataset"] = classification_config["extended_dataset"]
+        config["pretraining"]["extended_split"] = classification_config["extended_split"]
+        config["pretraining"]["training_set_split"] = classification_config["training_set_split"]
         # further pretrain model with MaskedLanguageModeling objective 
         pretrain_model(config["pretraining"], save_file_path, pretrained_model_name)
 
@@ -137,6 +143,7 @@ def train_with_pretrained_model_and_save_best(config_path):
             
             # load the classifier size 
             classifier_size = classification_config["classifier_size"]
+            
 
             model = CustomClassifier(model_name = f"{save_file_path}/best_model", model_type = transformers.AutoModelForMaskedLM, classifier_size = classifier_size)
             
@@ -160,8 +167,19 @@ def train_with_pretrained_model_and_save_best(config_path):
 
             # load the classifier size 
             classifier_size = classification_config["classifier_size"]
+            dropout_rate = classification_config["dropout_rate"]
+            head_type = classification_config["head_type"] # "attention" or "fc"
+            attention_dim = classification_config["attention_dim"]
+            classification_layer_count = classification_config["classification_layer_count"]
+            num_attention_heads = classification_config["num_attention_heads"]
+            
 
-            model = CustomClassifier(model_name = pretrained_model, model_type = transformers.AutoModelForMaskedLM, classifier_size = classifier_size) # maybe try bigger classigier_size? 
+            model = CustomClassifier(model_name = pretrained_model, model_type = transformers.AutoModelForMaskedLM, classifier_size = classifier_size,
+                                     dropout_rate=dropout_rate,
+                                     head_type=head_type,
+                                     attention_dim=attention_dim,
+                                     classification_layers_cnt=classification_layer_count,
+                                     num_attention_heads=num_attention_heads) # maybe try bigger classigier_size? 
 
             # to initialize LazyLinear layer to fit model output dimension to classification head input dimension
             dummys = torch.zeros((2, 512), dtype=torch.long)
@@ -182,7 +200,7 @@ def train_with_pretrained_model_and_save_best(config_path):
 
     # extend dataset with synthetic training data from ChatGPT
     if extend_dataset:
-        training_set_extension, _ = load_and_split_dataset("data/public_data/train/track_a/extended_eng.csv",1.0)
+        training_set_extension, _ = load_and_split_dataset("data/track_a/train/extended_split_data.csv",extended_split)
         training_set = pd.concat([training_set, training_set_extension], axis=0, ignore_index=True)
 
     # tokenize dataset 
@@ -371,7 +389,7 @@ def train_auto_model_and_save_best(model_name, dataset_path, freeze_layers = Fal
 def train_Roberta_model_and_save_best(model_name,dataset_path, freeze_layers = False, freeze_to_layer = 12, loRa = False, classification_head_size = 768,head_type="fc",save_as="",extended="yes",classification_layers=2,attention_dim=128,num_attention_heads=1,extended_split=1.0):
     tokenizer = RobertaTokenizer.from_pretrained(model_name)
     
-    training_set, validation_set = load_and_split_dataset(dataset_path, 0.90)
+    training_set, validation_set = load_and_split_dataset(dataset_path, 0.80)
     if extended=="yes":
         training_set_extension, _ = load_and_split_dataset("Semeval_Task/data/track_a/train/extended_split_data.csv",extended_split)
         print(training_set,training_set_extension)
@@ -414,7 +432,7 @@ def train_Roberta_model_and_save_best(model_name,dataset_path, freeze_layers = F
         for param in model.l1.encoder.layer[:freeze_to_layer-1].parameters(): 
             param.requires_grad = False
     
-    save_file_path, _  = get_save_file_path(model_name + save_as, category = 2)
+    save_file_path, fine_tuned_model_name  = get_save_file_path(model_name + save_as, category = 2)
     
     training_args = TrainingArguments(
         output_dir=save_file_path,
@@ -423,7 +441,7 @@ def train_Roberta_model_and_save_best(model_name,dataset_path, freeze_layers = F
         per_device_eval_batch_size=32,
         warmup_steps=500,
         weight_decay=0.01,
-        logging_dir=f'./logs/{save_file_path}',
+        logging_dir=f'./logs/{fine_tuned_model_name}',
         eval_strategy='steps',  # Evaluate at the end of each epoch
         eval_steps=100,
         eval_on_start=True,
@@ -621,7 +639,7 @@ def load_and_validate_Roberta_model(model_name, model_path, dataset_path, plot_c
 #train_Roberta_model_and_save_best("roberta-base","data/public_data/train/track_a/eng.csv")
 if __name__ == "__main__": 
     # load_and_validate_Roberta_model("roberta-base","roberta-base_2024-12-16_19-13-00","data/public_data/train/track_a/eng.csv", plot_conf_mat = "save")
-    train_Roberta_model_and_save_best(model_name = "roberta-base", dataset_path = "data/track_a/train/eng.csv", freeze_layers = False, freeze_to_layer = 12, loRa = False)
+    # train_Roberta_model_and_save_best(model_name = "roberta-base", dataset_path = "data/track_a/train/eng.csv", freeze_layers = False, freeze_to_layer = 12, loRa = False)
     # train_Roberta_model_and_save_best(model_name = "roberta-large", dataset_path = "Semeval_Task/data/public_data/train/track_a/eng.csv", freeze_layers = True, freeze_to_layer = 24, loRa = False)
     # train_Roberta_model_and_save_best(model_name = "roberta-base", dataset_path = "Semeval_Task/data/public_data/train/track_a/eng.csv", freeze_layers = True, freeze_to_layer = 24, loRa = False)
     # pretrain_Roberta_model(model_name = "distilbert/distilroberta-base", dataset_path = "data/public_data/train/track_a/eng.csv")
@@ -632,6 +650,6 @@ if __name__ == "__main__":
     #train_t5_model_and_save_best(model_name = "google-t5/t5-small", dataset_path = "data/public_data/train/track_a/eng.csv", freeze_layers = False, freeze_to_layer = 12, loRa = False)
     
     # train_with_pretrained_model_and_save_best(pretrained_model = "roberta-base_2025-01-03_17-14-47", custom = True, loRa = True)
-    #train_with_pretrained_model_and_save_best(config_path = "./config/with_pretraining/config.yaml")
+    train_with_pretrained_model_and_save_best(config_path = "./config/with_pretraining/config.yaml")
 
 
