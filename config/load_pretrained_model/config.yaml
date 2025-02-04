@@ -4,7 +4,8 @@
 
 classification: 
   dataset_path: "data/public_data/train/track_a/eng.csv"
-  pretrained_model: "roberta-base_2025-01-03_17-14-47" # this parameter has to be added 
+  training_set_split: 0.8
+  pretrained_model: "results/pretraining/roberta-large_2025-01-31_21-11-24/best_model"
   custom: False 
   extended_dataset: False 
   freeze_layers: False 
@@ -12,7 +13,7 @@ classification:
   loRa: False 
 
   training:
-    train_epochs: 1
+    train_epochs: 30
     learning_rate: 0.00002
     per_device_train_batch_size: 6
     per_device_eval_batch_size: 6
