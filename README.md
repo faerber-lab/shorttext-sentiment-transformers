@@ -160,6 +160,13 @@ Input a divisible number of examples.
 ## Besprechung 28.01.2025: 
 1. Sigmoid-layer bei Custom Classification Head nicht benutzt? 
 2. Paper über Größe Classification Head. 
+3. Welche Models für Training? 
+
+### Ergebnis: 
+1. legacy, wird in Evaluation-Funktion benutzt
+2. Wurde gefunden 
+3. BERT, BERT-Large, RoBERTa und RoBERTa-Large jeweils mit und ohne further pretraining und einmal auf normalen Trainigsset einaml auf erweitertem Trainingsset -> Vergleich einmal zwischen BERT und RoBERTa und Einfluss von Modelgröße, bei bestem Model dann nochmal classification head size variieren 
+4. eventuell classification struktur anpassen mit attention 
 
 
  
@@ -169,3 +176,14 @@ Input a divisible number of examples.
 
 ## ToDos: 
 - In Related Word: Paper das sagt, dass Transformer / Encoder gut geeignet sind, bzw. mit anderen Verfahren wie Word2Vec / LSTM vergleichen -> Attention gut, um komplexe Zusammenhänge im Text mit einzubeziehen, ist wichtig für Sentimentanalysis -> auf Bert Paper / Roberta Paper verweisen, Paper "HowToFineTuneBertForTextClassification" -> weiteres Pretraining 
+
+
+
+- einmal Trainings (siehe Tabelle) für originales Trainingsset und für extended Trainingsset (einmal 0.3, 0.6 und 1.0 extended_split)
+
+| further pre-training | BERT-uncased | BERT-Large-uncased | RoBERTa | RoBERTa-Large |
+| :------------------: | :--: | :--------: | :-----: | :-----------: |
+| no | | | | |
+| yes | | | | |    
+
+- Auswahl bestes Model -> unterschiedliche Classification Heads (ein und zwei Attention und fully concected mit 2, 4, 6 layern)
