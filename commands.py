@@ -368,13 +368,14 @@ def train_auto_model_and_save_best(model_name, dataset_path, freeze_layers = Fal
     
 
 @command
-def train_Roberta_model_and_save_best(model_name,dataset_path, freeze_layers = False, freeze_to_layer = 12, loRa = False):
+def train_Roberta_model_and_save_best(model_name,dataset_path, freeze_layers = False, freeze_to_layer = 12, loRa = False, classification_head_size = 768,head_type="fc",save_as="",extended="yes",classification_layers=2,attention_dim=128,num_attention_heads=1,extended_split=1.0):
     tokenizer = RobertaTokenizer.from_pretrained(model_name)
     
-    training_set, validation_set = load_and_split_dataset(dataset_path, 0.95)
-    # training_set_extension, _ = load_and_split_dataset("data/public_data/train/track_a/extended_eng.csv",1.0)
-    # print(training_set,training_set_extension)
-    # training_set = pd.concat([training_set, training_set_extension], axis=0, ignore_index=True)
+    training_set, validation_set = load_and_split_dataset(dataset_path, 0.90)
+    if extended=="yes":
+        training_set_extension, _ = load_and_split_dataset("Semeval_Task/data/track_a/train/extended_split_data.csv",extended_split)
+        print(training_set,training_set_extension)
+        training_set = pd.concat([training_set, training_set_extension], axis=0, ignore_index=True)
     training_set = training_set[training_set['text'].apply(lambda x: isinstance(x, str))]
     assert all(isinstance(text, str) for text in training_set['text']), "Invalid text type in training_set"
     
@@ -383,8 +384,9 @@ def train_Roberta_model_and_save_best(model_name,dataset_path, freeze_layers = F
 
     
 
-    model = CustomClassifier(model_name = model_name, model_type = RobertaModel, classifier_size = 4096)
+    model = CustomClassifier(model_name = model_name, model_type = RobertaModel, classifier_size = classification_head_size ,dropout_rate=0, head_type=head_type, attention_dim=attention_dim,classification_layers_cnt=classification_layers,num_attention_heads=num_attention_heads)
 
+    print(model)
     # print name and type of all modules the model contains 
     #print([(n, type(m)) for n, m in model.named_modules()])
 
@@ -412,16 +414,16 @@ def train_Roberta_model_and_save_best(model_name,dataset_path, freeze_layers = F
         for param in model.l1.encoder.layer[:freeze_to_layer-1].parameters(): 
             param.requires_grad = False
     
-    save_file_path, _  = get_save_file_path(model_name, category = 2)
+    save_file_path, _  = get_save_file_path(model_name + save_as, category = 2)
     
     training_args = TrainingArguments(
         output_dir=save_file_path,
-        num_train_epochs=25,
-        per_device_train_batch_size=6,
-        per_device_eval_batch_size=6,
+        num_train_epochs=30,
+        per_device_train_batch_size=32,
+        per_device_eval_batch_size=32,
         warmup_steps=500,
         weight_decay=0.01,
-        logging_dir='./logs',
+        logging_dir=f'./logs/{save_file_path}',
         eval_strategy='steps',  # Evaluate at the end of each epoch
         eval_steps=100,
         eval_on_start=True,
@@ -452,7 +454,8 @@ def train_Roberta_model_and_save_best(model_name,dataset_path, freeze_layers = F
     trainer._load_best_model()
     results = trainer.evaluate()
     print(results)
-    model = CustomClassifier(model_name, RobertaModel, 4096)
+    model = CustomClassifier(model_name = model_name, model_type = RobertaModel, classifier_size = classification_head_size,dropout_rate=0, head_type=head_type, attention_dim=attention_dim,classification_layers_cnt = classification_layers,num_attention_heads=num_attention_heads)
+
     if loRa: 
         lora_config = LoraConfig(
             task_type=TaskType.SEQ_CLS, r=1, 
@@ -475,16 +478,96 @@ def train_Roberta_model_and_save_best(model_name,dataset_path, freeze_layers = F
                             data_collator=data_collator, 
                             compute_metrics=compute_metrics_f1)
     print("Best model loaded")
-    print(trainer.evaluate(eval_dataset=validation_set))
+    result = trainer.evaluate(eval_dataset=validation_set)
+    print(result)
+    
+    with open(f"{save_file_path}/results.yaml", "w") as file:
+        yaml.dump(result, file)
+
     
     remove_all_files_and_folders_except_best_model(save_file_path)
     
+    
+    
     return
 
-@command
-def load_and_validate_Roberta_model(model_name, model_path, dataset_path, plot_conf_mat = "none"):
+def load_and_validate_Roberta_model_on_dev_set(model_name, model_path, dataset_path):
+    """
+    Classifies the texts in a development dataset using a RoBERTa-based classifier,
+    fills in sentiment labels, and saves only the ID and labels into a new file.
+
+    Args:
+        dev_file (str): Path to the development CSV file.
+        output_file (str): Path to save the classified CSV file.
+        model_name (str): Pretrained RoBERTa model name or path.
+        tokenizer_name (str): Tokenizer name corresponding to the RoBERTa model.
+        emotion_columns (list): List of sentiment labels (e.g., ["Anger", "Fear", "Joy", "Sadness", "Surprise"]).
+    """
+    import torch
+    from transformers import RobertaTokenizer, RobertaForSequenceClassification
+    import pandas as pd
+    from sklearn.preprocessing import MultiLabelBinarizer
+
+    # Load the development dataset
+    dev_set = load_and_split_dataset(dataset_path,split_ratio=1.0)
+
+    # Load the tokenizer and model
     tokenizer = RobertaTokenizer.from_pretrained(model_name)
-    test_set, validation_set = load_and_split_dataset(dataset_path,0.95)
+    model = torch.load(f"./results/{model_path}/best_model.pth")# should be .results/.../best_model.pth or similar
+    model.eval()  # Set model to evaluation mode
+
+    emotion_columns = ['Anger', 'Fear', 'Joy', 'Sadness', 'Surprise']
+
+    # Initialize MultiLabelBinarizer
+    mlb = MultiLabelBinarizer(classes=emotion_columns)
+    mlb.fit([emotion_columns])  # Ensure consistent encoding
+
+    # Prepare output containers
+    classified_results = []
+    ids = []
+
+    for _, row in dev_set.iterrows():
+        text = row["text"]
+        id_ = row["id"]
+
+        # Tokenize the input text
+        inputs = tokenizer(
+            text,
+            truncation=True,
+            padding="max_length",
+            max_length=512,
+            return_tensors="pt"
+        )
+
+        # Perform inference with the model
+        with torch.no_grad():
+            outputs = model(**inputs)
+            #print(outputs)
+            probabilities = torch.sigmoid(outputs)
+            predicted_labels = (probabilities > 0.5).int().tolist()[0]
+
+        # Convert predictions to one-hot encoding
+        one_hot_encoded = mlb.transform([[
+            emotion_columns[i] for i, label in enumerate(predicted_labels) if label == 1
+        ]])
+
+        # Store the results
+        classified_results.append(one_hot_encoded.flatten())
+        ids.append(id_)
+
+    # Combine IDs and classified results into a DataFrame
+    classified_df = pd.DataFrame(classified_results, columns=emotion_columns)
+    classified_df.insert(0, "id", ids)
+
+    # Save the classified dataset
+    classified_df.to_csv(f"results/{model_path}/dev_set.csv", index=False)
+    print(f"Classified development dataset saved")
+
+
+@command
+def load_and_validate_Roberta_model(model_name, model_path, dataset_path, plot_conf_mat = "none", dev_set=False):
+    tokenizer = RobertaTokenizer.from_pretrained(model_name)
+    train_set, validation_set = load_and_split_dataset(dataset_path,0.95)
     validation_set = tokenize_dataset(validation_set, tokenizer, 512)
 
     # TODO remove, only for testing
@@ -498,16 +581,21 @@ def load_and_validate_Roberta_model(model_name, model_path, dataset_path, plot_c
                                         label_names=["labels"],
                                         dataloader_drop_last=True)
     trainer = CustomTrainer(model=model,
-
                             args=training_args,
                             eval_dataset=validation_set,
                             data_collator=data_collator, 
                             compute_metrics=compute_metrics_f1)
     
+        
+    
     predictions = trainer.predict(validation_set)
 
+    if dev_set:
+        print(f"Evaluated dev set {predictions}")
+        
     print(predictions.metrics)
-
+    
+    
     if plot_conf_mat == "plot": 
 
         plot_confusion_matrix(predictions)
@@ -526,22 +614,24 @@ def load_and_validate_Roberta_model(model_name, model_path, dataset_path, plot_c
         print(f"'{plot_conf_mat}' is no valid value for this parameter. The confusion matrix is not plotted or saved.")
 
     return
-
+    
 
 
 
 #train_Roberta_model_and_save_best("roberta-base","data/public_data/train/track_a/eng.csv")
 if __name__ == "__main__": 
     # load_and_validate_Roberta_model("roberta-base","roberta-base_2024-12-16_19-13-00","data/public_data/train/track_a/eng.csv", plot_conf_mat = "save")
-    # train_Roberta_model_and_save_best(model_name = "roberta-base", dataset_path = "data/public_data/train/track_a/eng.csv", freeze_layers = False, freeze_to_layer = 12, loRa = True)
+    train_Roberta_model_and_save_best(model_name = "roberta-base", dataset_path = "data/track_a/train/eng.csv", freeze_layers = False, freeze_to_layer = 12, loRa = False)
     # train_Roberta_model_and_save_best(model_name = "roberta-large", dataset_path = "Semeval_Task/data/public_data/train/track_a/eng.csv", freeze_layers = True, freeze_to_layer = 24, loRa = False)
+    # train_Roberta_model_and_save_best(model_name = "roberta-base", dataset_path = "Semeval_Task/data/public_data/train/track_a/eng.csv", freeze_layers = True, freeze_to_layer = 24, loRa = False)
     # pretrain_Roberta_model(model_name = "distilbert/distilroberta-base", dataset_path = "data/public_data/train/track_a/eng.csv")
-    #load_and_validate_Roberta_model("roberta-base","roberta-base_2024-12-16_19-13-00","data/public_data/train/track_a/eng.csv", plot_conf_mat = "save")
+    # load_and_validate_Roberta_model("roberta-base","roberta-base_2025-01-03_16-56-32","data/public_data/dev/track_a/eng_a.csv", plot_conf_mat = "save",dev_set=True)
+    # load_and_validate_Roberta_model_on_dev_set("roberta-base","roberta-base_2025-01-03_16-56-32","data/public_data/dev/track_a/eng_a.csv")
     #train_Roberta_model_and_save_best(model_name = "roberta-base", dataset_path = "data/public_data/train/track_a/eng.csv", freeze_layers = True, freeze_to_layer = 12, loRa = False)
     #train_auto_model_and_save_best(model_name = "distilbert/distilroberta-base", dataset_path = "data/public_data/train/track_a/eng.csv", freeze_layers = False, freeze_to_layer = 12, loRa = False)
     #train_t5_model_and_save_best(model_name = "google-t5/t5-small", dataset_path = "data/public_data/train/track_a/eng.csv", freeze_layers = False, freeze_to_layer = 12, loRa = False)
     
     # train_with_pretrained_model_and_save_best(pretrained_model = "roberta-base_2025-01-03_17-14-47", custom = True, loRa = True)
-    train_with_pretrained_model_and_save_best(config_path = "./config/with_pretraining/config.yaml")
+    #train_with_pretrained_model_and_save_best(config_path = "./config/with_pretraining/config.yaml")
 
 

@@ -69,11 +69,11 @@ def clean_dataset(dataset):
 def tokenize_dataset(dataset, tokenizer, max_len):
     targets = torch.tensor(
         list(zip(
-            dataset["Anger"],
-            dataset["Fear"],
-            dataset["Joy"],
-            dataset["Sadness"],
-            dataset["Surprise"]
+            dataset["anger"],
+            dataset["fear"],
+            dataset["joy"],
+            dataset["sadness"],
+            dataset["surprise"]
         )),
         dtype=torch.float
     )
@@ -96,20 +96,63 @@ def _prepare_data(text, label,tokenizer,max_len):
     return tokenized
 
 
-class CustomClassifier(torch.nn.Module):
-    def __init__(self,model_name,model_type, classifier_size, dropout_rate=0.3, num_classes=5):
-        super(CustomClassifier, self).__init__()
-        self.config = RobertaConfig.from_pretrained(model_name)
-        #self.l1 = RobertaModel.from_pretrained("roberta-base")
-        #self.l1 = AutoModelForMaskedLM.from_pretrained("distilbert/distilroberta-base")
-        #self.l1 = AutoModelForSeq2SeqLM.from_pretrained(model_name)#"google-t5/t5-small")
-        self.l1 = model_type.from_pretrained(model_name)
+import torch
+from transformers import RobertaConfig, AutoModel
+import torch
+from transformers import RobertaConfig, RobertaModel  # oder das entsprechende Model
 
-        self.pre_classifier = torch.nn.LazyLinear(classifier_size)
-        self.dropout = torch.nn.Dropout(dropout_rate)
-        self.classifier = torch.nn.Linear(classifier_size, num_classes)
-        self.sigmoid = torch.nn.Sigmoid()   
+class CustomClassifier(torch.nn.Module):
+    def __init__(
+        self, 
+        model_name, 
+        model_type, 
+        classifier_size, 
+        dropout_rate=0.3, 
+        num_classes=5, 
+        head_type="fc", 
+        attention_dim=64,
+        classification_layers_cnt=2,
+        num_attention_heads=1
+    ):
+        super(CustomClassifier, self).__init__()
         
+        # Roberta-Konfiguration und Basismodell laden
+        self.config = RobertaConfig.from_pretrained(model_name)
+        self.l1 = model_type.from_pretrained(model_name)
+        self.head_type = head_type.lower()
+
+        # **FC Head**
+        if self.head_type == "fc":
+            layers = []
+            # Erste Schicht: LazyLinear, ReLU und Dropout
+            layers.append(torch.nn.LazyLinear(classifier_size))
+            layers.append(torch.nn.ReLU())
+            layers.append(torch.nn.Dropout(dropout_rate))
+            
+            # Zusätzliche Schichten, falls gewünscht
+            for _ in range(classification_layers_cnt - 2):
+                layers.append(torch.nn.Linear(classifier_size, classifier_size))
+                layers.append(torch.nn.ReLU())
+                layers.append(torch.nn.Dropout(dropout_rate))
+            
+            # Finale Ausgabeschicht
+            layers.append(torch.nn.Linear(classifier_size, num_classes))
+            self.classification_layers = torch.nn.Sequential(*layers)
+
+        # **Self-Attention-Based Head**
+        elif self.head_type == "attention":
+            self.projection = torch.nn.Linear(self.config.hidden_size, attention_dim)
+            self.self_attention = torch.nn.MultiheadAttention(
+                embed_dim=attention_dim, 
+                num_heads=num_attention_heads, 
+                batch_first=True
+            )
+            self.attention_classifier = torch.nn.Linear(attention_dim, num_classes)
+        else:
+            raise ValueError("Invalid head_type. Choose between 'fc' and 'attention'.")
+
+        self.sigmoid = torch.nn.Sigmoid()
+
     def forward(
         self, 
         labels=None, 
@@ -120,8 +163,8 @@ class CustomClassifier(torch.nn.Module):
         output_attentions=None, 
         output_hidden_states=None, 
         return_dict=None
-        ):
-        # Pass inputs to the base model
+    ):
+        # Übergabe der Eingaben an das Basismodell
         if inputs_embeds is not None:
             output_1 = self.l1(
                 inputs_embeds=inputs_embeds,
@@ -141,21 +184,33 @@ class CustomClassifier(torch.nn.Module):
                 return_dict=return_dict
             )
 
-        # Extract hidden states and pooler output
-        hidden_state = output_1[0]
-        pooler = hidden_state[:, 0]  # CLS token representation
-        pooler = self.pre_classifier(pooler)
-        pooler = torch.nn.ReLU()(pooler)
-        pooler = self.dropout(pooler)
-        output = self.classifier(pooler)
+        hidden_state = output_1[0]  # Sequenzoutput (batch_size, seq_len, hidden_size)
 
-        # Compute loss if labels are provided
+        if self.head_type == "fc":
+            # CLS-Token extrahieren (erste Tokenposition)
+            pooler = hidden_state[:, 0]
+            # Durch den FC-Head leiten
+            output = self.classification_layers(pooler)
+            
+        elif self.head_type == "attention":
+            # Projektion und Self-Attention
+            projected_tokens = self.projection(hidden_state)
+            attn_output, _ = self.self_attention(
+                projected_tokens, projected_tokens, projected_tokens,
+                key_padding_mask=(~attention_mask.bool() if attention_mask is not None else None)
+            )
+            pooled_output = torch.mean(attn_output, dim=1)  # Mittelwert über die Token
+            output = self.attention_classifier(pooled_output)
+
+        # Berechnung des Loss, falls Labels vorhanden sind
         if labels is not None:
             loss_fn = torch.nn.BCEWithLogitsLoss()
             loss = loss_fn(output, labels)
             return loss, output
 
         return output
+
+
 
 
 
@@ -285,11 +340,11 @@ def plot_confusion_matrix(predictions, save_path = None, file_name = None, show 
     ids = torch.tensor(predictions.label_ids,device=device)
 
     label_map = {
-    'LABEL_0': 'Anger',
-    'LABEL_1': 'Fear',
-    'LABEL_2': 'Joy',
-    'LABEL_3': 'Sadness',
-    'LABEL_4': 'Surprise'
+    'LABEL_0': 'anger',
+    'LABEL_1': 'fear',
+    'LABEL_2': 'joy',
+    'LABEL_3': 'sadness',
+    'LABEL_4': 'surprise'
     }
 
     cm = multilabel_confusion_matrix(ids, preds)
