@@ -1,4 +1,5 @@
 import pandas as pd
+from tensorboard.backend.event_processing.event_accumulator import EventAccumulator
 from sklearn.model_selection import train_test_split
 import torch
 from torch import nn
@@ -10,6 +11,7 @@ from transformers import RobertaModel, RobertaTokenizer, TrainingArguments, Trai
 
 import os
 import seaborn as sns
+import matplotlib as mpl 
 import matplotlib.pyplot as plt
 
 import re
@@ -24,6 +26,39 @@ elif torch.cuda.is_available():
     device = torch.device('cuda')
 else:
     device = torch.device('cpu')
+
+def show_tensorBoard_data(log_dir_list = ["./logs/pretraining/roberta-base_2025-01-29_13-50-06", "./logs/pretraining/roberta-base_2025-01-29_10-39-30"], 
+                            plot_name_list = ["RoBERTa-base", "RoBERTa-large"],  
+                            metric = "loss",
+                            title = "Pretraining loss",
+                            font = "Times New Roman"):
+
+    for i, log_dir in enumerate(log_dir_list):
+        event_accumulator = EventAccumulator(log_dir)
+        event_accumulator.Reload()
+
+        events = event_accumulator.Scalars(f"eval/{metric}")
+        
+        x = [x.step for x in events]
+        y = [x.value for x in events]
+
+        df = pd.DataFrame({"step": x, metric: y})
+
+        plt.plot(df["step"].values, df[metric].values, label = plot_name_list[i])
+
+    # change the font style and size of the legend 
+    mpl.rc('font', family = font)
+    font_size = 15
+
+    plt.xlabel("step", fontname = font, fontsize = font_size)
+    plt.ylabel(metric, fontname = font, fontsize = font_size)
+    plt.title(title, fontname = font, fontsize = font_size)
+    plt.legend()
+    plt.grid()
+    plt.show()
+
+    return 
+
 
 
 def load_and_split_dataset(dataset_path, split_ratio=0.8):
@@ -49,7 +84,7 @@ def tokenize_dataset_for_pretraining(dataset, tokenizer):
     tokenized = [tokenizer(text) for text in dataset["text"]]
     
     return tokenized 
-def clean_text(text):
+def clean_text(text): 
     # Convert to lowercase
     text = text.lower()
     # Remove hyperlinks
@@ -369,3 +404,7 @@ def plot_confusion_matrix(predictions, save_path = None, file_name = None, show 
     if show: 
         plt.show()
     
+
+if __name__ == "__main__": 
+
+    show_tensorBoard_data()
