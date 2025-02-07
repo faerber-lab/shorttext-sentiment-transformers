@@ -4,7 +4,8 @@
 
 classification: 
   dataset_path: "data/track_a/train/eng.csv"
-  pretrained_model: "roberta-base"
+  pretrained_model: roberta-large_2025-01-31_21-11-24
+  hugginface: false # if the pretrained model should be loaded from hugginface or from the lokal folder 
   training_set_split: 0.8
   custom: True # if custom is true an additional parameter "classifier_size", "dropout_rate", "head_type", "attention_dim", "num_attention_heads" and "classification_layer_count" have to be specified
   classifier_size: 768

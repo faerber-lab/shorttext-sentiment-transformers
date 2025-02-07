@@ -175,8 +175,10 @@ Input a divisible number of examples.
 
 
 ## ToDos: 
-- In Related Word: Paper das sagt, dass Transformer / Encoder gut geeignet sind, bzw. mit anderen Verfahren wie Word2Vec / LSTM vergleichen -> Attention gut, um komplexe Zusammenhänge im Text mit einzubeziehen, ist wichtig für Sentimentanalysis -> auf Bert Paper / Roberta Paper verweisen, Paper "HowToFineTuneBertForTextClassification" -> weiteres Pretraining 
 
+- Schreibweise klären: fine-tuning, pre-training, trainings-data / trainings-set, Multihead attention, gpt4o-mini, openai, multi-label, dataset
+
+- Bilder anpassen 
 
 
 - einmal Trainings (siehe Tabelle) für originales Trainingsset und für extended Trainingsset (einmal 0.3, 0.6 und 1.0 extended_split)
@@ -186,4 +188,4 @@ Input a divisible number of examples.
 | no | | | | |
 | yes | | | | |    
 
-- Auswahl bestes Model -> unterschiedliche Classification Heads (ein und zwei Attention und fully concected mit 2, 4, 6 layern)
+- Auswahl bestes Model -> unterschiedliche Classification Heads (ein und zwei Attention Heads und fully concected mit 2, 4, 6 layern)
