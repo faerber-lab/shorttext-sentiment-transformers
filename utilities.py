@@ -30,6 +30,7 @@ else:
 def show_tensorBoard_data(log_dir_list = ["./logs/pretraining/roberta-base_2025-01-29_13-50-06", "./logs/pretraining/roberta-base_2025-01-29_10-39-30"], 
                             plot_name_list = ["RoBERTa-base", "RoBERTa-large"],  
                             metric = "loss",
+                            mode = "eval", 
                             title = "Pretraining loss",
                             font = "Times New Roman"):
 
@@ -37,7 +38,7 @@ def show_tensorBoard_data(log_dir_list = ["./logs/pretraining/roberta-base_2025-
         event_accumulator = EventAccumulator(log_dir)
         event_accumulator.Reload()
 
-        events = event_accumulator.Scalars(f"eval/{metric}")
+        events = event_accumulator.Scalars(f"{mode}/{metric.lower()}")
         
         x = [x.step for x in events]
         y = [x.value for x in events]
@@ -50,7 +51,7 @@ def show_tensorBoard_data(log_dir_list = ["./logs/pretraining/roberta-base_2025-
     mpl.rc('font', family = font)
     font_size = 15
 
-    plt.xlabel("step", fontname = font, fontsize = font_size)
+    plt.xlabel("Steps", fontname = font, fontsize = font_size)
     plt.ylabel(metric, fontname = font, fontsize = font_size)
     plt.title(title, fontname = font, fontsize = font_size)
     plt.legend()
