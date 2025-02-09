@@ -9,6 +9,15 @@ import yaml
 
 
 def pretrain_model(config, save_folder_path, save_folder_name): 
+    """
+    A pre-trained model from Hugginface is loaded and pre-trained (Masked-Language-Modeling) again on the 
+    domain specific data. 
+
+    Args: 
+        config: dictonary with config data 
+        save_folder_path: path to store the results 
+        save_folder_name: name of the folder to store the results 
+    """
 
     # load config 
     model_name = config["model_to_pretrain"]
@@ -23,7 +32,6 @@ def pretrain_model(config, save_folder_path, save_folder_name):
     learning_rate = pretraining_args["learning_rate"]
     weight_decay = pretraining_args["weight_decay"]
     
-
 
     tokenizer = AutoTokenizer.from_pretrained(model_name)
 
@@ -277,8 +285,6 @@ def train_with_pretrained_model_and_save_best(config_path):
                             compute_metrics=compute_metrics_f1)
     
     # train and evaluate result 
-    return 
-
     trainer.train()
 
     results = trainer.evaluate()

@@ -176,9 +176,23 @@ Input a divisible number of examples.
 
 ## ToDos: 
 
-- Schreibweise klären: fine-tuning, pre-training, trainings-data / trainings-set, Multihead attention, gpt4o-mini, openai, multi-label, dataset
+- Schreibweise klären: 
+fine-tuning -> mit Bindestrich 
+pre-training -> mit Bindestrich  
+trainings-data / trainings-set, machen wa so  
+Multihead attention,
+gpt4o-mini -> kursiv 
+openai -> kursiv  
+multi-label -> mit Bindestrich  
+dataset -> zusammen geschrieben 
 
-- Bilder anpassen 
+- Plots anpassen, an richtige Stelle setzten  
+
+- Quellen überprüfen (werden wirklich alle verwendet) -> wird automatisch gemacht 
+
+- Schriftart Bild am Anfang anpassen -> ist gemacht 
+
+- Code aufräumen 
 
 
 - einmal Trainings (siehe Tabelle) für originales Trainingsset und für extended Trainingsset (einmal 0.3, 0.6 und 1.0 extended_split)
