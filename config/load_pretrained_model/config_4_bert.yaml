@@ -1,0 +1,30 @@
+
+# if a new model should be pretrained the parameter "pretrained_model" 
+# for the classification is not needed 
+
+
+classification: 
+  pretrained_model: "bert-base-uncased"
+  dataset_path: "data/track_a/train/eng.csv"
+  training_set_split: 0.8
+  custom: True # if custom is true an additional parameter "classifier_size", "drop_out_ratge", "head_type", "attention_dim", "num_attention_heads" and "classification_layer_count" have to be specified
+  classifier_size: 768
+  dropout_rate: 0.1
+  head_type: "fc" # "fc" or "attention" are valid values 
+  attention_dim: 128 
+  num_attention_heads: 1
+  classification_layer_count: 2
+  extended_dataset: True # if extended_dataset is True an additional parameter "extended_split" has to be added 
+  extended_split: 1.0
+  freeze_layers: False 
+  freeze_to_layer: 12
+  loRa: False 
+
+  training:
+    train_epochs: 30
+    learning_rate: 0.00002
+    per_device_train_batch_size: 32
+    per_device_eval_batch_size: 32
+    warmup_steps: 500
+    weight_decay: 0.01
+
