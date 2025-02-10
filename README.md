@@ -1,34 +1,26 @@
 # Semeval_Task
-Repository for the Codebase etc. of Semeval Task for Behind the Secrets of LLMS 
 
+This repository contains the code and documentation for SemEval Task 11 (Codabench) for "Behind the Secrets of LLMs".
 
-This Repository Contains Scripts as well as documentation for the semeval task 11 (Codabench)
-Provided Features:
-- Training Script via commands.py
-- utilities via utilities.py
-- webapp for human evaluation via human_eval.py
-- human evaluation evaluation via human_eval_evaluation.py :)
-- interactive shap view via shap_text_plot.html
-- results found in results/final_eval
-- trainings configs found in /config
-- sbatch scripts found in /scripts
-- and some legacy plots etc
+## Features
+- **Training Script:** `commands.py`
+- **Utilities:** `utilities.py`
+- **Human Evaluation Webapp:** `human_eval.py`
+- **Evaluation Script:** `human_eval_evaluation.py`
+- **Interactive SHAP Visualization:** `shap_text_plot.html`
+- **Final Results:** `results/final_eval`
+- **Training Configs:** `/config`
+- **SBATCH Scripts:** `/scripts`
+- **Additional Legacy Plots and Resources**
 
+## Cloning the Repository
 
-
-Clone this Repo via
-```
+Clone the repository and initialize Git LFS:
+```bash
 git clone git@github.com:TUD-Semeval-Group/Semeval_Task.git
-```
-
-
-```
 git lfs install
-```
-
-```
 git lfs pull
-```
+
 
 ## Setup
 
