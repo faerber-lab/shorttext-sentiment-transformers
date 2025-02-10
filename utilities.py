@@ -5,16 +5,15 @@ import torch
 from torch import nn
 
 from tensorboard.backend.event_processing.event_accumulator import EventAccumulator
-from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
-from transformers import AutoTokenizer, AutoModelForMaskedLM
+from transformers import AutoTokenizer, AutoModelForSeq2SeqLM, AutoModelForMaskedLM
 from transformers import RobertaModel, RobertaTokenizer, TrainingArguments, Trainer, RobertaConfig
+
 
 
 import os
 import seaborn as sns
 import matplotlib as mpl 
 import matplotlib.pyplot as plt
-import matplotlib as mpl
 
 import re
 import numpy as np 
@@ -155,10 +154,6 @@ def _prepare_data(text, label,tokenizer,max_len):
     return tokenized
 
 
-import torch
-from transformers import RobertaConfig, AutoModel
-import torch
-from transformers import RobertaConfig, RobertaModel  # oder das entsprechende Model
 
 class CustomClassifier(torch.nn.Module):
     def __init__(
@@ -175,7 +170,7 @@ class CustomClassifier(torch.nn.Module):
     ):
         super(CustomClassifier, self).__init__()
         
-        # Roberta-Konfiguration und Basismodell laden
+        # load Roberta-Config and pretrained model 
         self.config = RobertaConfig.from_pretrained(model_name)
         self.l1 = model_type.from_pretrained(model_name)
         self.head_type = head_type.lower()
@@ -183,18 +178,17 @@ class CustomClassifier(torch.nn.Module):
         # **FC Head**
         if self.head_type == "fc":
             layers = []
-            # Erste Schicht: LazyLinear, ReLU und Dropout
+            # First Layer: LazyLinear, ReLU und Dropout
             layers.append(torch.nn.LazyLinear(classifier_size))
             layers.append(torch.nn.ReLU())
             layers.append(torch.nn.Dropout(dropout_rate))
             
-            # Zusätzliche Schichten, falls gewünscht
             for _ in range(classification_layers_cnt - 2):
                 layers.append(torch.nn.Linear(classifier_size, classifier_size))
                 layers.append(torch.nn.ReLU())
                 layers.append(torch.nn.Dropout(dropout_rate))
             
-            # Finale Ausgabeschicht
+            # Final Layer
             layers.append(torch.nn.Linear(classifier_size, num_classes))
             self.classification_layers = torch.nn.Sequential(*layers)
 
@@ -269,23 +263,6 @@ class CustomClassifier(torch.nn.Module):
 
         return output
 
-
-
-
-
-class T5Classifier(CustomClassifier):
-    
-    def forward(self, labels, input_ids, attention_mask, token_type_ids):
-        output_1 = self.l1(input_ids=input_ids, attention_mask=attention_mask, decoder_input_ids=token_type_ids)
-        hidden_state = output_1[0]
-        pooler = hidden_state[:, 0]
-        pooler = self.pre_classifier(pooler)
-        pooler = torch.nn.ReLU()(pooler)
-        pooler = self.dropout(pooler)
-        output = self.classifier(pooler)
-        loss = nn.BCEWithLogitsLoss()(output, labels)
-        #print(f"{loss.shape=} {output.shape=}")
-        return loss, output
     
 class CustomTrainer(Trainer):
     

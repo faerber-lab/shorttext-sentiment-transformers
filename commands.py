@@ -5,8 +5,6 @@ from peft import LoraConfig, TaskType, get_peft_model
 from upycli import command
 import yaml
 
-#def train_t5_model_and_save_best(model_name,dataset_path, freeze_layers = False, freeze_to_layer = 12, loRa = False):
-
 
 def pretrain_model(config, save_folder_path, save_folder_name): 
     """
@@ -94,6 +92,21 @@ def pretrain_model(config, save_folder_path, save_folder_name):
 
 
 def train_with_pretrained_model_and_save_best(config_path): 
+    """
+    Trains a classification model using either a pretrained or further pretrained model and saves the best version.
+
+    **Steps:**
+    - **Load Config:** Reads a YAML file from `config_path` with training, dataset, and model parameters.
+    - **Prepare Model:** Either further pretrains a model using MLM or loads an existing pretrained model (with optional customizations).
+    - **Process Data:** Loads, splits, and tokenizes the dataset; optionally extends it with synthetic data.
+    - **Adjust Model:** Applies LoRA or freezes layers based on configuration.
+    - **Train & Evaluate:** Runs training with a custom trainer and evaluates using F1 score.
+    - **Save Results:** Stores the configuration, evaluation metrics, and the best model as a `.pth` file, then cleans up.
+
+    Parameters:
+      - config_path (str): Path to the YAML configuration file.
+
+    """
 
     # load config from yaml
     with open(config_path, 'r') as file: 
@@ -299,6 +312,9 @@ def train_with_pretrained_model_and_save_best(config_path):
 
 
 def train_auto_model_and_save_best(model_name, dataset_path, freeze_layers = False, freeze_to_layer = 12, loRa = False):
+    """
+    Outdated Function, please use train_with_pretrained_model_and_save_best
+    """
     tokenizer = AutoTokenizer.from_pretrained(model_name)
     
     training_set, validation_set = load_and_split_dataset(dataset_path, 0.95)
@@ -395,6 +411,10 @@ def train_auto_model_and_save_best(model_name, dataset_path, freeze_layers = Fal
 
 @command
 def train_Roberta_model_and_save_best(model_name,dataset_path, freeze_layers = False, freeze_to_layer = 12, loRa = False, classification_head_size = 768,head_type="fc",save_as="",extended="yes",classification_layers=2,attention_dim=128,num_attention_heads=1,extended_split=1.0):
+    """
+    Outdated Function, please use train_with_pretrained_model_and_save_best
+    """
+    
     tokenizer = RobertaTokenizer.from_pretrained(model_name)
     
     training_set, validation_set = load_and_split_dataset(dataset_path, 0.80)
