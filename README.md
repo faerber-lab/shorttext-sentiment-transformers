@@ -20,7 +20,7 @@ Clone the repository and initialize Git LFS:
 git clone git@github.com:TUD-Semeval-Group/Semeval_Task.git
 git lfs install
 git lfs pull
-
+```
 
 ## Setup
 
