@@ -110,7 +110,6 @@ def train_with_pretrained_model_and_save_best(config_path):
     freeze_to_layer = classification_config["freeze_to_layer"]
     loRa = classification_config["loRa"]
     extended_split = classification_config["extended_split"]
-    huggin_face_model = classification_config["hugginface"]
 
     # load training args
     classification_args = classification_config["training"]
@@ -125,23 +124,16 @@ def train_with_pretrained_model_and_save_best(config_path):
     # look if a model should be pretrained or a pretrained model should be loaded 
     if "pretraining" in config.keys(): 
 
-        pretrained_model_path = None
+        pretrained_model = None
         model_to_pretrain = config["pretraining"]["model_to_pretrain"]
 
     else: 
 
         model_to_pretrain = None 
-
-        if huggin_face_model:
-            pretrained_model_path = classification_config["pretrained_model"]
-        else:
-            
-            # name of pretrained model has to be completed to the whole path 
-            model_name = classification_config["pretrained_model"]
-            pretrained_model_path = f"./results/pretraining/{model_name}/best_model"
+        pretrained_model = classification_config["pretrained_model"]
 
 
-    if model_to_pretrain is not None and pretrained_model_path is None: 
+    if model_to_pretrain is not None and pretrained_model is None: 
         
         save_file_path, pretrained_model_name = get_save_file_path(model_name = model_to_pretrain, category = 1)
 
@@ -160,6 +152,7 @@ def train_with_pretrained_model_and_save_best(config_path):
             # load the classifier size 
             classifier_size = classification_config["classifier_size"]
             
+
             model = CustomClassifier(model_name = f"{save_file_path}/best_model", model_type = transformers.AutoModelForMaskedLM, classifier_size = classifier_size)
             
             # to initialize LazyLinear layer to fit model output dimension to classification head input dimension
@@ -170,12 +163,12 @@ def train_with_pretrained_model_and_save_best(config_path):
         else:
             model = transformers.AutoModelForSequenceClassification.from_pretrained(f"{save_file_path}/best_model", num_labels = 5)
 
-    elif model_to_pretrain is None and pretrained_model_path is not None: 
+    elif model_to_pretrain is None and pretrained_model is not None: 
 
-        pretrained_model_name = classification_config["pretrained_model"]
+        pretrained_model_name = pretrained_model
 
         # load tokenizer from further pretrained model 
-        tokenizer = AutoTokenizer.from_pretrained(pretrained_model_path)
+        tokenizer = AutoTokenizer.from_pretrained(pretrained_model)
 
         # load pretrained model with classification head 
         if custom:
@@ -189,7 +182,7 @@ def train_with_pretrained_model_and_save_best(config_path):
             num_attention_heads = classification_config["num_attention_heads"]
             
 
-            model = CustomClassifier(model_name = pretrained_model_path, model_type = transformers.AutoModelForMaskedLM, classifier_size = classifier_size,
+            model = CustomClassifier(model_name = pretrained_model, model_type = transformers.AutoModelForMaskedLM, classifier_size = classifier_size,
                                      dropout_rate=dropout_rate,
                                      head_type=head_type,
                                      attention_dim=attention_dim,
@@ -202,10 +195,10 @@ def train_with_pretrained_model_and_save_best(config_path):
             model(label_dummys,dummys, dummys, dummys) 
 
         else:
-            model = transformers.AutoModelForSequenceClassification.from_pretrained(pretrained_model_path, num_labels = 5)
+            model = transformers.AutoModelForSequenceClassification.from_pretrained(pretrained_model, num_labels = 5)
 
     else: 
-        print(f"Parameter combination of model_to_pretrain = {model_to_pretrain} and pretrained_model = {pretrained_model_path} is not valid.")
+        print(f"Parameter combination of model_to_pretrain = {model_to_pretrain} and pretrained_model = {pretrained_model} is not valid.")
 
     # debug 
     print(model)
@@ -258,7 +251,6 @@ def train_with_pretrained_model_and_save_best(config_path):
         warmup_steps = warmup_steps,
         weight_decay = weight_decay,
         logging_dir = f"./logs/classification/{fine_tuned_model_name}",
-        # logging_dir = save_file_path,
         eval_strategy = 'steps',  # Evaluate at the end of each epoch
         eval_steps = 100,
         eval_on_start = True,
@@ -666,6 +658,6 @@ if __name__ == "__main__":
     #train_t5_model_and_save_best(model_name = "google-t5/t5-small", dataset_path = "data/public_data/train/track_a/eng.csv", freeze_layers = False, freeze_to_layer = 12, loRa = False)
     
     # train_with_pretrained_model_and_save_best(pretrained_model = "roberta-base_2025-01-03_17-14-47", custom = True, loRa = True)
-    train_with_pretrained_model_and_save_best(config_path = "./config/load_pretrained_model/config.yaml")
+    train_with_pretrained_model_and_save_best(config_path = "./config/with_pretraining/config.yaml")
 
 
