@@ -8,7 +8,7 @@
 #SBATCH --output=logs/load_pretrained_model/config_1_bert.log
 #SBATCH --error=logs/load_pretrained_model/error/config_1_bert.log
 #SBATCH --mail-type=begin,end,fail
-#SBATCH --mail-user=nuni18092003@gmail.com
+#SBATCH --mail-user=XXXX
 #SBATCH --account=p_scads_llm_secrets
 
 source ./../semevalenv/bin/activate
