@@ -1,6 +1,6 @@
 # Semeval_Task
 
-This repository contains the code and documentation for SemEval Task 11 (Codabench) for "Behind the Secrets of LLMs".
+This repository contains the supplementary materials for LDD'25 paper @ECAI
 
 ## Features
 - **Training Script:** `commands.py`
