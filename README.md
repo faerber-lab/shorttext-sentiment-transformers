@@ -1,4 +1,4 @@
-# Semeval_Task
+# Supplementary materials: Optimizing Small Transformer-based Language Models for Multi-Label Sentiment Analysis in Short Texts (LDD@ECAI'25)
 
 This repository contains the supplementary materials for LDD'25 paper @ECAI
 
