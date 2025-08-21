@@ -1,4 +1,4 @@
-# 📘 Supplementary Materials  
+## Supplementary Materials:
 ## Optimizing Small Transformer-based Language Models for Multi-Label Sentiment Analysis in Short Texts  (_LDD@ECAI 2025_)
 
 ### 📄 Abstract  
