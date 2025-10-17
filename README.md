@@ -1,21 +1,19 @@
-## Supplementary Materials:
-## Optimizing Small Transformer-based Language Models for Multi-Label Sentiment Analysis in Short Texts  (_LDD@ECAI 2025_)
+## Supplementary Materials  
+### Optimizing Small Transformer-based Language Models for Multi-Label Sentiment Analysis in Short Texts (_LDD@ECAI 2025_)
 
-### 📄 Abstract  
-Sentiment classification in short text datasets presents unique challenges, including class imbalance, limited training data, and the inherent subjectivity of sentiment labels. These challenges are further exacerbated by the brevity of the texts, which limits contextual cues necessary for disambiguation.  
+This study explores the performance of small Transformer models (sub-1B parameters) for **multi-label sentiment classification** in **short texts**, addressing challenges like class imbalance and limited context.
 
-In this work, we evaluate the effectiveness of **small Transformer-based models** (BERT and RoBERTa with fewer than 1 billion parameters) for **multi-label sentiment classification**, specifically in short-text scenarios. We focus on three key optimization strategies:
+We assess three optimization strategies:  
+1. Domain-specific continued pre-training  
+2. Generative data augmentation  
+3. Classification head modifications  
 
-1. **Continued domain-specific pre-training**
-2. **Generative data augmentation**
-3. **Architectural variations in the classification head**
+**Findings**:  
+- Generative augmentation boosts performance notably.  
+- Continued pre-training on synthetic data can be noisy and counterproductive.  
+- Classification head changes yield only minor improvements.
 
-**Key Findings**:
-- Generative data augmentation significantly improves classification performance.
-- Continued pre-training on augmented data may introduce noise, with minimal or negative effects on performance.
-- Architectural tweaks to the classification head provide only marginal gains.
-
-These insights aim to guide practitioners in efficiently adapting small Transformer models for nuanced sentiment analysis tasks, particularly in low-resource or short-text environments.
+These results offer practical guidance for adapting lightweight models in low-resource, short-text sentiment analysis tasks.
 
 ---
 
@@ -38,4 +36,4 @@ These insights aim to guide practitioners in efficiently adapting small Transfor
 
 ### 📫 Contact
 
-For questions or collaborations, feel free to reach out: *[michael.faerber@tu-dresden.de](mailto:michael.faerber@tu-dresden.de)*
+For any questions feel free to reach out: *[michael.faerber@tu-dresden.de](mailto:michael.faerber@tu-dresden.de)*
